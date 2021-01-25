@@ -1,7 +1,12 @@
 #[macro_use]
 extern crate lazy_static;
 
+use std::fs::OpenOptions;
 use futures::future::join_all;
+use serde::Serialize;
+use std::error::Error;
+use std::fmt;
+use std::fs::{self, File};
 
 use scraper::{ElementRef, Html, Selector};
 
@@ -13,8 +18,67 @@ lazy_static! {
 }
 
 const ELITE_DANGEROUS_COMMUNITY_SITE: &'static str = "https://community.elitedangerous.com";
+const EXTRACT_LOCATION: &'static str = "./galnet-files";
+
+trait GalnetError {
+    fn error_string(&self) -> String;
+}
+
+impl fmt::Display for dyn GalnetError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.error_string())
+    }
+}
+
+impl fmt::Debug for dyn GalnetError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.error_string())
+    }
+}
 
 #[derive(Debug)]
+struct ScraperError {
+    url: String,
+    cause: Box<dyn Error>,
+}
+
+impl GalnetError for ScraperError {
+    fn error_string(&self) -> String {
+        format!("Error while scraping from \"{}\" {}", self.url, self.cause)
+    }
+}
+
+impl ScraperError {
+    fn from(url: String, error: Box<dyn Error>) -> Self {
+        ScraperError { url, cause: error }
+    }
+}
+
+#[derive(Debug)]
+struct FileError {
+    filename: String,
+    cause: Box<dyn Error>,
+}
+
+impl GalnetError for FileError {
+    fn error_string(&self) -> String {
+        format!(
+            "Error while scraping from \"{}\" {}",
+            self.filename, self.cause
+        )
+    }
+}
+
+impl FileError {
+    fn from(filename: String, error: Box<dyn Error>) -> Self {
+        FileError {
+            filename,
+            cause: error,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
 struct Article {
     title: String,
     date: String,
@@ -55,11 +119,11 @@ fn extract_date_links(html: &str) -> Vec<String> {
         .collect()
 }
 
-async fn extract_link_articles(url: &str) -> Result<Vec<Article>, Box<dyn std::error::Error>> {
-    println!("Fetching link \"{}\"", url);
-    let html = fetch_link(&url).await?;
-    println!("Fetched link \"{}\"", url);
-    Ok(extract_articles(&html))
+async fn extract_page_articles(url: &str) -> Result<Vec<Article>, ScraperError> {
+    match fetch_link(&url).await {
+        Ok(html) => Ok(extract_articles(&html)),
+        Err(e) => Err(ScraperError::from(url.into(), e)),
+    }
 }
 
 fn extract_articles(html: &str) -> Vec<Article> {
@@ -79,23 +143,56 @@ fn extract_articles(html: &str) -> Vec<Article> {
         .collect()
 }
 
-async fn extract_all() -> Result<Vec<Article>, Box<dyn std::error::Error>> {
+async fn extract_all(
+) -> Result<(Vec<Article>, Vec<Box<dyn GalnetError>>), Box<dyn std::error::Error>> {
     let html = fetch_link(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
     let links = extract_date_links(&html);
 
-    let extraction_results = join_all(links.iter().map(|link| extract_link_articles(&link))).await;
+    let extraction_results = join_all(links.iter().map(|link| extract_page_articles(&link))).await;
+
     let mut articles = vec![];
+    let mut errors: Vec<Box<dyn GalnetError>> = vec![];
     for result in extraction_results {
-        articles.append(&mut result?)
+        match result {
+            Ok(mut page_articles) => articles.append(&mut page_articles),
+            Err(error) => errors.push(Box::new(error) as Box<dyn GalnetError>),
+        }
     }
-    Ok(articles)
+
+    fs::create_dir_all(EXTRACT_LOCATION)?;
+
+    let mut file_errors = articles
+        .iter()
+        .map(|article| serialize_to_file(&gen_article_filename(article), article))
+        .filter(|result| result.is_err())
+        .map(|error_result| {
+            Box::new(FileError::from("".to_owned(), error_result.unwrap_err()))
+                as Box<dyn GalnetError>
+        })
+        .collect();
+
+    errors.append(&mut file_errors);
+
+    Ok((articles, errors))
+}
+
+fn gen_article_filename(article: &Article) -> String {
+    format!("{}/{} - {}.json", EXTRACT_LOCATION, article.date, article.title)
+}
+
+fn serialize_to_file(
+    filename: &str,
+    value: &impl Serialize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    serde_json::ser::to_writer(OpenOptions::new().write(true).truncate(true).create(true).open(filename)?, value);
+    Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let articles = extract_all().await?;
+    let (articles, failures) = extract_all().await?;
     println!("{:#?}", articles);
-    
+    println!("{:#?}", failures);
     // let resp = fetch_link("https://gist.githubusercontent.com/leodutra/6ce7397e0b8c20eb16f8949263e511c7/raw/galnet.html").await?;
     // let links = extract_date_links(&resp);
     // println!("{:#?}", links);
