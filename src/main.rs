@@ -164,44 +164,43 @@ fn extract_articles(html: &str) -> Vec<Article> {
 
 async fn extract_all(
 ) -> Result<(Vec<Article>, Vec<Box<dyn GalnetError>>), Box<dyn std::error::Error>> {
-    let html = fetch_link(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
-    let links = extract_date_links(&html);
 
-    let extraction_results = join_all(links.iter().map(|link| extract_page_articles(&link))).await;
+    let downloaded_articles = EXTRACT_LOCATION
+
+    println!("{}", downloaded_articles);
+    // let html = fetch_link(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
+    // let links = extract_date_links(&html);
+
+    // let extraction_results = join_all(links.iter().map(|link| extract_page_articles(&link))).await;
 
     let mut articles = vec![];
     let mut errors: Vec<Box<dyn GalnetError>> = vec![];
-    for result in extraction_results {
-        match result {
-            Ok(mut page_articles) => articles.append(&mut page_articles),
-            Err(error) => errors.push(Box::new(error) as Box<dyn GalnetError>),
-        }
-    }
+    // for result in extraction_results {
+    //     match result {
+    //         Ok(mut page_articles) => articles.append(&mut page_articles),
+    //         Err(error) => errors.push(Box::new(error) as Box<dyn GalnetError>),
+    //     }
+    // }
 
-    fs::create_dir_all(EXTRACT_LOCATION)?;
+    // fs::create_dir_all(EXTRACT_LOCATION)?;
 
-    let mut file_errors = articles
-        .iter()
-        .map(|article| serialize_to_file(&gen_article_filename(article), article))
-        .filter(|result| result.is_err())
-        .map(|error_result| {
-            Box::new(FileError::from("".to_owned(), error_result.unwrap_err()))
-                as Box<dyn GalnetError>
-        })
-        .collect();
+    // let mut file_errors = articles
+    //     .iter()
+    //     .map(|article| serialize_to_file(&gen_article_filename(article), article))
+    //     .filter(|result| result.is_err())
+    //     .map(|error_result| {
+    //         Box::new(FileError::from("".to_owned(), error_result.unwrap_err()))
+    //             as Box<dyn GalnetError>
+    //     })
+    //     .collect();
 
-    errors.append(&mut file_errors);
+    // errors.append(&mut file_errors);
 
     Ok((articles, errors))
 }
 
 fn gen_article_filename(article: &Article) -> String {
-    let title = if article.title.trim().is_empty() {
-        &article.uid
-    } else {
-        article.title.trim()
-    };
-    format!("{}/{} - {}.json", EXTRACT_LOCATION, article.date, title)
+    format!("{}/{} - {}.json", EXTRACT_LOCATION, article.date, article.uid)
 }
 
 fn serialize_to_file(
