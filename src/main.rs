@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate nanoid;
+
 use std::fs::OpenOptions;
 use futures::future::join_all;
 use serde::Serialize;
@@ -177,7 +180,12 @@ async fn extract_all(
 }
 
 fn gen_article_filename(article: &Article) -> String {
-    format!("{}/{} - {}.json", EXTRACT_LOCATION, article.date, article.title)
+    let title = if article.title.trim().is_empty() {
+        nanoid()
+    } else {
+        article.title.trim()
+    };
+    format!("{}/{} - {}.json", EXTRACT_LOCATION, article.date, title)
 }
 
 fn serialize_to_file(
