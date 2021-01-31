@@ -4,13 +4,13 @@ extern crate lazy_static;
 #[macro_use]
 extern crate nanoid;
 
-use std::{fs::OpenOptions};
 use futures::future::join_all;
+use regex::Regex;
 use serde::Serialize;
 use std::error::Error;
 use std::fmt;
 use std::fs;
-use regex::Regex;
+use std::fs::OpenOptions;
 
 use scraper::{ElementRef, Html, Selector};
 
@@ -19,7 +19,6 @@ lazy_static! {
     static ref ARTICLE_DATE_SELECTOR: Selector = Selector::parse("div > p").unwrap();
     static ref ARTICLE_URL_SELECTOR: Selector = Selector::parse("h3 > a").unwrap();
     static ref ARTICLE_CONTENT_SELECTOR: Selector = Selector::parse(":scope > p").unwrap();
-
     static ref URL_UID_MATCHER: Regex = Regex::new(r"/uid/([^/#?]+)").unwrap();
 }
 
@@ -148,15 +147,15 @@ fn extract_articles(html: &str) -> Vec<Article> {
     document
         .select(&article_selector)
         .map(|article| {
-            let url = &get_element_url(
-                &article.select(&ARTICLE_URL_SELECTOR).next().unwrap(),
-            );
+            let url = &get_element_url(&article.select(&ARTICLE_URL_SELECTOR).next().unwrap());
             Article {
                 title: get_element_text(&article.select(&ARTICLE_TITLE_SELECTOR).next().unwrap()),
                 date: get_element_text(&article.select(&ARTICLE_DATE_SELECTOR).next().unwrap()),
                 url: with_site_url(url),
-                uid: extract_galnet_url_uid(url), 
-                content: get_element_text(&article.select(&ARTICLE_CONTENT_SELECTOR).next().unwrap()),
+                uid: extract_galnet_url_uid(url),
+                content: get_element_text(
+                    &article.select(&ARTICLE_CONTENT_SELECTOR).next().unwrap(),
+                ),
             }
         })
         .collect()
@@ -208,7 +207,14 @@ fn serialize_to_file(
     filename: &str,
     value: &impl Serialize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    serde_json::ser::to_writer(OpenOptions::new().write(true).truncate(true).create(true).open(filename)?, value)?;
+    serde_json::ser::to_writer(
+        OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(filename)?,
+        value,
+    )?;
     Ok(())
 }
 
@@ -218,7 +224,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{:#?}", articles);
     println!("{:#?}", failures);
 
-    println!("{}", extract_galnet_url_uid("/galnet/uid/5fdcdca955fd67154d2f1b54"));
+    println!(
+        "{}",
+        extract_galnet_url_uid("/galnet/uid/5fdcdca955fd67154d2f1b54")
+    );
     // let resp = fetch_link("https://gist.githubusercontent.com/leodutra/6ce7397e0b8c20eb16f8949263e511c7/raw/galnet.html").await?;
     // let links = extract_date_links(&resp);
     // println!("{:#?}", links);
