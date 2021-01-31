@@ -9,7 +9,7 @@ use futures::future::join_all;
 use serde::Serialize;
 use std::error::Error;
 use std::fmt;
-use std::fs::{self, File};
+use std::fs;
 
 use scraper::{ElementRef, Html, Selector};
 
@@ -181,9 +181,9 @@ async fn extract_all(
 
 fn gen_article_filename(article: &Article) -> String {
     let title = if article.title.trim().is_empty() {
-        nanoid()
+        nanoid!()
     } else {
-        article.title.trim()
+        article.title.trim().to_owned()
     };
     format!("{}/{} - {}.json", EXTRACT_LOCATION, article.date, title)
 }
@@ -192,7 +192,7 @@ fn serialize_to_file(
     filename: &str,
     value: &impl Serialize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    serde_json::ser::to_writer(OpenOptions::new().write(true).truncate(true).create(true).open(filename)?, value);
+    serde_json::ser::to_writer(OpenOptions::new().write(true).truncate(true).create(true).open(filename)?, value)?;
     Ok(())
 }
 
