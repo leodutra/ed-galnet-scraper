@@ -19,6 +19,7 @@ lazy_static! {
     static ref ARTICLE_DATE_SELECTOR: Selector = Selector::parse("div > p").unwrap();
     static ref ARTICLE_URL_SELECTOR: Selector = Selector::parse("h3 > a").unwrap();
     static ref ARTICLE_CONTENT_SELECTOR: Selector = Selector::parse(":scope > p").unwrap();
+
     static ref URL_UID_MATCHER: Regex = Regex::new(r"/uid/([^/#?]+)").unwrap();
 }
 
