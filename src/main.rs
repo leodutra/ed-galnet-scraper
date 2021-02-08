@@ -54,13 +54,30 @@ struct ScraperError {
 
 impl GalnetError for ScraperError {
     fn error_string(&self) -> String {
-        format!("Error while scraping from \"{}\" {}", self.url, self.cause)
+        format!("Error while scraping from \"{}\": {}", self.url, self.cause)
     }
 }
 
 impl ScraperError {
     fn from(url: String, error: Box<dyn Error>) -> Self {
         ScraperError { url, cause: error }
+    }
+}
+
+#[derive(Debug)]
+struct ParserError {
+    cause: String,
+}
+
+impl GalnetError for ParserError {
+    fn error_string(&self) -> String {
+        format!("Error while parsing: {}", self.cause)
+    }
+}
+
+impl ParserError {
+    fn from(error: String) -> Self {
+        ParserError { cause: error }
     }
 }
 
@@ -73,7 +90,7 @@ struct FileError {
 impl GalnetError for FileError {
     fn error_string(&self) -> String {
         format!(
-            "Error while scraping from \"{}\" {}",
+            "Error while scraping from \"{}\": {}",
             self.filename, self.cause
         )
     }
@@ -97,11 +114,11 @@ struct Article {
     content: String,
 }
 
-fn with_site_url(url: &str) -> String {
+fn with_site_base_url(url: &str) -> String {
     return String::from(ELITE_DANGEROUS_COMMUNITY_SITE) + url;
 }
 
-async fn fetch_link(link: &str) -> Result<String, Box<dyn Error>> {
+async fn fetch_text(link: &str) -> Result<String, Box<dyn Error>> {
     Ok(reqwest::get(link).await?.text().await?)
 }
 
@@ -133,56 +150,72 @@ fn extract_date_links(html: &str) -> Vec<String> {
         .select(&date_anchor_selector)
         .map(|element| element.value().attr("href"))
         .filter(|href| href.is_some())
-        .map(|href| with_site_url(href.unwrap()))
+        .map(|href| with_site_base_url(href.unwrap().trim()))
         .collect()
 }
 
 async fn extract_page_articles(url: &str, avoided_uids: HashSet<String>) -> Result<Vec<Article>, ScraperError> {
-    match fetch_link(&url).await {
-        Ok(html) => Ok(extract_articles(&html, avoided_uids)),
+    match fetch_text(&url).await {
+        Ok(html) => {
+            match extract_articles(&html, avoided_uids) {
+                Ok(articles) => Ok(articles),
+                Err(e) => Err(ScraperError::from(url.into(), e)),
+            }
+        },
         Err(e) => Err(ScraperError::from(url.into(), e)),
     }
 }
 
-fn extract_articles(html: &str, avoided_uids: HashSet<String>) -> Vec<Article> {
+fn extract_articles(html: &str, avoided_uids: HashSet<String>) -> Result<Vec<Article>, Vec<Box<ParserError>>> {
     Html::parse_document(html)
         .select(&ARTICLE_SELECTOR)
-        .filter(|article|)
+        // .filter(|article|)
         .map(|article| {
-            let url = &get_element_url(
-                &article
-                    .select(&ARTICLE_URL_SELECTOR)
-                    .next()
-                    .expect("Scraped article URL"),
-            );
-            Article {
-                title: get_element_text(
-                    &article
-                        .select(&ARTICLE_TITLE_SELECTOR)
-                        .next()
-                        .expect("Scraped article title"),
-                ),
-                date: get_element_text(
-                    &article
-                        .select(&ARTICLE_DATE_SELECTOR)
-                        .next()
-                        .expect("Scraped article date"),
-                ),
-                url: with_site_url(url),
-                uid: extract_galnet_url_uid(url).expect("Extracted uid from URL"),
+            let select_in_article = |selector| &article.select(selector).next();
+            let build_err = |cause: &str| Err(Box::from(ParserError { cause: cause.into() }));
+
+            let url = if let Some(url_el) = select_in_article(&ARTICLE_URL_SELECTOR) {
+                    with_site_base_url(&get_element_url(url_el))
+                } else {
+                    return build_err("coudn't find article url");
+                };
+
+            let title = if let Some(title_el) = select_in_article(&ARTICLE_TITLE_SELECTOR) {
+                    get_element_text(title_el)
+                } else {
+                    return build_err("coudn't find article title");
+                };
+
+            let date = if let Some(date_el) = select_in_article(&ARTICLE_DATE_SELECTOR) {
+                    get_element_text(date_el)
+                } else {
+                    return build_err("coudn't find article date");
+                };
+
+            let uid = if let Some(uid) = extract_galnet_url_uid(&url) {
+                uid
+            } else {
+                return build_err("coudn't find article date");
+            };
+            
+            Ok(Article {
+                title,
+                date,
+                url,
+                uid,
                 content: get_element_text(
                     &article
                         .select(&ARTICLE_CONTENT_SELECTOR)
                         .next()
                         .expect("Scraped article content"),
                 ),
-            }
+            })
         })
         .collect()
 }
 
 async fn extract_all() -> Result<(Vec<Article>, Vec<Box<dyn GalnetError>>), Box<dyn Error>> {
-    let html = fetch_link(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
+    let html = fetch_text(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
     let links: Vec<String> = extract_date_links(&html);
     let extraction_results = join_all(
         links
@@ -268,7 +301,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "{}",
         extract_galnet_url_uid("/galnet/uid/5fdcdca955fd67154d2f1b54").unwrap()
     );
-    // let resp = fetch_link("https://gist.githubusercontent.com/leodutra/6ce7397e0b8c20eb16f8949263e511c7/raw/galnet.html").await?;
+    // let resp = fetch_text("https://gist.githubusercontent.com/leodutra/6ce7397e0b8c20eb16f8949263e511c7/raw/galnet.html").await?;
     // let links = extract_date_links(&resp);
     // println!("{:#?}", links);
     // println!("{:#?}", extract_date_articles(&resp));
