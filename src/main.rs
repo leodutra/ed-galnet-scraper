@@ -15,6 +15,7 @@ use std::{collections::HashSet, error::Error};
 use scraper::{ElementRef, Html, Selector};
 
 lazy_static! {
+    static ref GALNET_DATE_LINK_SELECTOR: Selector = Selector::parse("a.galnetLinkBoxLink").expect("GalNet link selector");
     static ref ARTICLE_SELECTOR: Selector = Selector::parse(".article").expect("Article selector");
     static ref ARTICLE_TITLE_SELECTOR: Selector =
         Selector::parse("h3").expect("Article title selector");
@@ -39,7 +40,7 @@ enum GalnetError {
         cause: Box<dyn Error>,
     },
     ParserError {
-        cause: Box<dyn Error>,
+        cause: String,
     },
     ScraperError {
         url: String,
@@ -64,13 +65,6 @@ impl fmt::Display for GalnetError {
         }
     }
 }
-
-impl<'a> From<cssparser::ParseError<'a, cssparser::BasicParseErrorKind<'a>>> for GalnetError {
-    fn from(_: cssparser::ParseError<'a, cssparser::BasicParseErrorKind>) -> Self {
-        todo!()
-    }
-}
-
 #[derive(Debug, Serialize)]
 struct Article {
     uid: String,
@@ -109,16 +103,14 @@ fn extract_galnet_url_uid(url: &str) -> Option<String> {
     URL_UID_MATCHER.captures(url).map(|cap| cap[1].into())
 }
 
-fn extract_date_links(html: &str) -> Result<Vec<String>, GalnetError> {
+fn extract_date_links(html: &str) -> Vec<String> {
     let fragment = Html::parse_document(html);
-    let date_anchor_selector = Selector::parse("a.galnetLinkBoxLink")
-            .map_err(|e| ParserError { cause: e as Box<dyn Error> })?;
-    Ok(fragment
-        .select(&date_anchor_selector)
+    fragment
+        .select(&GALNET_DATE_LINK_SELECTOR)
         .map(|element| element.value().attr("href"))
         .filter(|href| href.is_some())
         .map(|href| with_site_base_url(href.unwrap().trim()))
-        .collect())
+        .collect()
 }
 
 async fn extract_page_articles(
