@@ -16,10 +16,13 @@ use scraper::{ElementRef, Html, Selector};
 const ELITE_DANGEROUS_COMMUNITY_SITE: &'static str = "https://community.elitedangerous.com";
 
 const EXTRACT_LOCATION: &'static str = "./galnet";
-const FAILED_PAGES_FILE: &'static str = "failed-pages.json";
 
 lazy_static! {
+    // FILES
+    static ref FAILED_PAGES_FILE: String = String::from(EXTRACT_LOCATION) + "/failed-pages.json";
     static ref EXTRACTED_FILES_LOCATION: String = String::from(EXTRACT_LOCATION) + "/files";
+
+    // EXTRACTION
     static ref GALNET_DATE_LINK_SELECTOR: Selector =
         Selector::parse("a.galnetLinkBoxLink").expect("GalNet link selector");
     static ref ARTICLE_SELECTOR: Selector = Selector::parse(".article").expect("Article selector");
@@ -226,7 +229,7 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
     all_failed_pages.dedup();
 
     if all_failed_pages.len() > 0 {
-        serialize_to_file(FAILED_PAGES_FILE, &all_failed_pages)?;
+        serialize_to_file(&FAILED_PAGES_FILE, &all_failed_pages)?;
     }
 
     Ok(())
