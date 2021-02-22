@@ -257,7 +257,7 @@ fn downloaded_uids() -> Result<HashSet<String>, Box<dyn Error>> {
 fn gen_article_filename(article: &Article) -> String {
     format!(
         "{}/{} - {}.json",
-        EXTRACTED_FILES_LOCATION, article.date, article.uid
+        EXTRACTED_FILES_LOCATION.clone(), article.date, article.uid
     )
 }
 
