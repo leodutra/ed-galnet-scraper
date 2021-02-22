@@ -243,7 +243,7 @@ fn extract_filename_uid(filename: &str) -> Option<String> {
 }
 
 fn downloaded_uids() -> Result<HashSet<String>, Box<dyn Error>> {
-    let downloaded_articles = list_downloaded_articles(EXTRACT_LOCATION)?;
+    let downloaded_articles = list_downloaded_articles(&EXTRACTED_FILES_LOCATION)?;
     let mut downloaded_uids = HashSet::new();
     for entry in downloaded_articles {
         entry?
