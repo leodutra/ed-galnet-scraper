@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
 
+use fmt::Debug;
 use futures::future::join_all;
 use glob::glob;
 use glob::Paths;
@@ -9,6 +10,7 @@ use serde::Serialize;
 use std::fmt;
 use std::fs::{self, OpenOptions};
 use std::{collections::HashSet, error::Error};
+
 
 use scraper::{ElementRef, Html, Selector};
 
@@ -30,78 +32,42 @@ lazy_static! {
 const ELITE_DANGEROUS_COMMUNITY_SITE: &'static str = "https://community.elitedangerous.com";
 const EXTRACT_LOCATION: &'static str = "./galnet-files";
 
-trait GalnetError {
-    fn error_string(&self) -> String;
+#[derive(Debug)]
+enum GalnetError {
+    FileError {
+        filename: String,
+        cause: Box<dyn Error>,
+    },
+    ParserError {
+        cause: Box<dyn Error>,
+    },
+    ScraperError {
+        url: String,
+        cause: Box<dyn Error>,
+    },
 }
 
-impl fmt::Display for dyn GalnetError {
+use GalnetError::{FileError, ParserError, ScraperError};
+
+impl fmt::Display for GalnetError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.error_string())
-    }
-}
-
-impl fmt::Debug for dyn GalnetError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.error_string())
-    }
-}
-
-#[derive(Debug)]
-struct ScraperError {
-    url: String,
-    cause: Box<dyn Error>,
-}
-
-impl GalnetError for ScraperError {
-    fn error_string(&self) -> String {
-        format!("Error while scraping from \"{}\": {}", self.url, self.cause)
-    }
-}
-
-impl ScraperError {
-    fn from(url: String, error: Box<dyn Error>) -> Self {
-        ScraperError { url, cause: error }
-    }
-}
-
-#[derive(Debug)]
-struct ParserError {
-    cause: String,
-}
-
-impl GalnetError for ParserError {
-    fn error_string(&self) -> String {
-        format!("Error while parsing: {}", self.cause)
-    }
-}
-
-impl ParserError {
-    fn from(error: String) -> Self {
-        ParserError { cause: error }
-    }
-}
-
-#[derive(Debug)]
-struct FileError {
-    filename: String,
-    cause: Box<dyn Error>,
-}
-
-impl GalnetError for FileError {
-    fn error_string(&self) -> String {
-        format!(
-            "Error while scraping from \"{}\": {}",
-            self.filename, self.cause
-        )
-    }
-}
-
-impl FileError {
-    fn from(filename: String, error: Box<dyn Error>) -> Self {
-        FileError {
-            filename,
-            cause: error,
+        match self {
+            FileError { filename, cause } => {
+                write!(f, "Error while scraping from \"{}\": {}", filename, cause)
+            }
+            ParserError { cause } => {
+                write!(f, "Error while parsing: {}", cause)
+            }
+            ScraperError { url, cause } => {
+                write!(f, "Error while scraping from \"{}\": {}", url, cause)
+            }
         }
+    }
+}
+
+impl<'a> From<cssparser::ParseError<'a, cssparser::BasicParseErrorKind<'a>>> for GalnetError {
+    fn from(_: cssparser::ParseError<'a, cssparser::BasicParseErrorKind>) -> Self {
+        todo!()
     }
 }
 
@@ -143,61 +109,69 @@ fn extract_galnet_url_uid(url: &str) -> Option<String> {
     URL_UID_MATCHER.captures(url).map(|cap| cap[1].into())
 }
 
-fn extract_date_links(html: &str) -> Vec<String> {
+fn extract_date_links(html: &str) -> Result<Vec<String>, GalnetError> {
     let fragment = Html::parse_document(html);
-    let date_anchor_selector = Selector::parse("a.galnetLinkBoxLink").expect("");
-    fragment
+    let date_anchor_selector = Selector::parse("a.galnetLinkBoxLink")
+            .map_err(|e| ParserError { cause: e as Box<dyn Error> })?;
+    Ok(fragment
         .select(&date_anchor_selector)
         .map(|element| element.value().attr("href"))
         .filter(|href| href.is_some())
         .map(|href| with_site_base_url(href.unwrap().trim()))
-        .collect()
+        .collect())
 }
 
-async fn extract_page_articles(url: &str, avoided_uids: HashSet<String>) -> Result<Vec<Article>, ScraperError> {
-    match fetch_text(&url).await {
-        Ok(html) => {
-            match extract_articles(&html, avoided_uids) {
-                Ok(articles) => Ok(articles),
-                Err(e) => Err(ScraperError::from(url.into(), e)),
-            }
+async fn extract_page_articles(
+    url: &str,
+    avoided_uids: HashSet<String>,
+) -> Result<Vec<Article>, GalnetError> {
+    match fetch_text(url).await {
+        Ok(html) => match extract_articles(&html) {
+            Ok(articles) => Ok(articles),
+            Err(e) => Err(e),
         },
-        Err(e) => Err(ScraperError::from(url.into(), e)),
+        Err(e) => Err(ScraperError {
+            url: url.into(),
+            cause: e,
+        }),
     }
 }
 
-fn extract_articles(html: &str, avoided_uids: HashSet<String>) -> Result<Vec<Article>, Vec<Box<ParserError>>> {
+fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
     Html::parse_document(html)
         .select(&ARTICLE_SELECTOR)
-        // .filter(|article|)
         .map(|article| {
             let select_in_article = |selector| &article.select(selector).next();
-            let build_err = |cause: &str| Err(Box::from(ParserError { cause: cause.into() }));
+            let parser_error = |cause: &str| {
+                Err(ParserError {
+                    cause: cause.into(),
+                })
+            };
 
             let url = if let Some(url_el) = select_in_article(&ARTICLE_URL_SELECTOR) {
-                    with_site_base_url(&get_element_url(url_el))
-                } else {
-                    return build_err("coudn't find article url");
-                };
-
-            let title = if let Some(title_el) = select_in_article(&ARTICLE_TITLE_SELECTOR) {
-                    get_element_text(title_el)
-                } else {
-                    return build_err("coudn't find article title");
-                };
-
-            let date = if let Some(date_el) = select_in_article(&ARTICLE_DATE_SELECTOR) {
-                    get_element_text(date_el)
-                } else {
-                    return build_err("coudn't find article date");
-                };
+                with_site_base_url(&get_element_url(url_el))
+            } else {
+                return parser_error("coudn't find article url");
+            };
 
             let uid = if let Some(uid) = extract_galnet_url_uid(&url) {
                 uid
             } else {
-                return build_err("coudn't find article date");
+                return parser_error("coudn't find article date");
             };
-            
+
+            let title = if let Some(title_el) = select_in_article(&ARTICLE_TITLE_SELECTOR) {
+                get_element_text(title_el)
+            } else {
+                return parser_error("coudn't find article title");
+            };
+
+            let date = if let Some(date_el) = select_in_article(&ARTICLE_DATE_SELECTOR) {
+                get_element_text(date_el)
+            } else {
+                return parser_error("coudn't find article date");
+            };
+
             Ok(Article {
                 title,
                 date,
@@ -214,7 +188,7 @@ fn extract_articles(html: &str, avoided_uids: HashSet<String>) -> Result<Vec<Art
         .collect()
 }
 
-async fn extract_all() -> Result<(Vec<Article>, Vec<Box<dyn GalnetError>>), Box<dyn Error>> {
+async fn extract_all() -> Result<(Vec<Article>, Vec<Box<GalnetError>>), Box<dyn Error>> {
     let html = fetch_text(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
     let links: Vec<String> = extract_date_links(&html);
     let extraction_results = join_all(
@@ -225,11 +199,11 @@ async fn extract_all() -> Result<(Vec<Article>, Vec<Box<dyn GalnetError>>), Box<
     .await;
 
     let mut articles = vec![];
-    let mut errors: Vec<Box<dyn GalnetError>> = vec![];
+    let mut errors: Vec<Box<GalnetError>> = vec![];
     for result in extraction_results {
         match result {
             Ok(mut page_articles) => articles.append(&mut page_articles),
-            Err(error) => errors.push(Box::new(error) as Box<dyn GalnetError>),
+            Err(error) => errors.push(Box::new(error) as Box<GalnetError>),
         }
     }
 
@@ -240,8 +214,10 @@ async fn extract_all() -> Result<(Vec<Article>, Vec<Box<dyn GalnetError>>), Box<
         .map(|article| serialize_to_file(&gen_article_filename(article), article))
         .filter(|result| result.is_err())
         .map(|error_result| {
-            Box::new(FileError::from("".to_owned(), error_result.unwrap_err()))
-                as Box<dyn GalnetError>
+            Box::new(FileError {
+                filename: "".to_owned(),
+                cause: error_result.unwrap_err(),
+            }) // as Box<GalnetError>
         })
         .collect();
 
