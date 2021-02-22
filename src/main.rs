@@ -7,15 +7,21 @@ use glob::glob;
 use glob::Paths;
 use regex::Regex;
 use serde::Serialize;
-use std::fmt;
 use std::fs::{self, OpenOptions};
 use std::{collections::HashSet, error::Error};
-
+use std::{fmt, vec};
 
 use scraper::{ElementRef, Html, Selector};
 
+const ELITE_DANGEROUS_COMMUNITY_SITE: &'static str = "https://community.elitedangerous.com";
+
+const EXTRACT_LOCATION: &'static str = "./galnet";
+const FAILED_PAGES_FILE: &'static str = "failed-pages.json";
+
 lazy_static! {
-    static ref GALNET_DATE_LINK_SELECTOR: Selector = Selector::parse("a.galnetLinkBoxLink").expect("GalNet link selector");
+    static ref EXTRACTED_FILES_LOCATION: String = String::from(EXTRACT_LOCATION) + "/files";
+    static ref GALNET_DATE_LINK_SELECTOR: Selector =
+        Selector::parse("a.galnetLinkBoxLink").expect("GalNet link selector");
     static ref ARTICLE_SELECTOR: Selector = Selector::parse(".article").expect("Article selector");
     static ref ARTICLE_TITLE_SELECTOR: Selector =
         Selector::parse("h3").expect("Article title selector");
@@ -29,9 +35,6 @@ lazy_static! {
     static ref FILENAME_UID_MATCHER: Regex =
         Regex::new(r"(\w+).json").expect("Filename UID matcher");
 }
-
-const ELITE_DANGEROUS_COMMUNITY_SITE: &'static str = "https://community.elitedangerous.com";
-const EXTRACT_LOCATION: &'static str = "./galnet-files";
 
 #[derive(Debug)]
 enum GalnetError {
@@ -65,6 +68,7 @@ impl fmt::Display for GalnetError {
         }
     }
 }
+
 #[derive(Debug, Serialize)]
 struct Article {
     uid: String,
@@ -113,55 +117,67 @@ fn extract_date_links(html: &str) -> Vec<String> {
         .collect()
 }
 
-async fn extract_page_articles(
-    url: &str,
-    avoided_uids: HashSet<String>,
-) -> Result<Vec<Article>, GalnetError> {
-    match fetch_text(url).await {
-        Ok(html) => match extract_articles(&html) {
-            Ok(articles) => Ok(articles),
-            Err(e) => Err(e),
-        },
-        Err(e) => Err(ScraperError {
-            url: url.into(),
-            cause: e,
-        }),
-    }
+#[derive(Default, Debug)]
+struct PageExtraction {
+    url: String,
+    articles: Vec<Article>,
+    errors: Vec<GalnetError>,
+}
+
+async fn extract_page(url: &str) -> PageExtraction {
+    let mut page = PageExtraction {
+        url: url.to_owned(),
+        ..Default::default()
+    };
+    match fetch_text(&page.url).await {
+        Ok(html) => extract_articles(&html)
+            .into_iter()
+            .for_each(|result| match result {
+                Ok(article) => page.articles.push(article),
+                Err(e) => page.errors.push(e),
+            }),
+        Err(e) => {
+            page.errors = vec![ScraperError {
+                url: page.url.clone(),
+                cause: e,
+            }]
+        }
+    };
+    page
 }
 
 fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
+    let parser_error = |cause: &str| {
+        Err(ParserError {
+            cause: cause.into(),
+        })
+    };
     Html::parse_document(html)
         .select(&ARTICLE_SELECTOR)
         .map(|article| {
-            let select_in_article = |selector| &article.select(selector).next();
-            let parser_error = |cause: &str| {
-                Err(ParserError {
-                    cause: cause.into(),
-                })
-            };
-
+            let select_in_article = |selector| article.select(selector).next();
             let url = if let Some(url_el) = select_in_article(&ARTICLE_URL_SELECTOR) {
-                with_site_base_url(&get_element_url(url_el))
+                with_site_base_url(&get_element_url(&url_el))
             } else {
-                return parser_error("coudn't find article url");
+                return parser_error("Couldn't find article url");
             };
 
             let uid = if let Some(uid) = extract_galnet_url_uid(&url) {
                 uid
             } else {
-                return parser_error("coudn't find article date");
+                return parser_error(&format!("Couldn't find article \"{}\" uid", url));
             };
 
             let title = if let Some(title_el) = select_in_article(&ARTICLE_TITLE_SELECTOR) {
-                get_element_text(title_el)
+                get_element_text(&title_el)
             } else {
-                return parser_error("coudn't find article title");
+                return parser_error(&format!("Couldn't find article \"{}\" title", uid));
             };
 
             let date = if let Some(date_el) = select_in_article(&ARTICLE_DATE_SELECTOR) {
-                get_element_text(date_el)
+                get_element_text(&date_el)
             } else {
-                return parser_error("coudn't find article date");
+                return parser_error(&format!("Couldn't find article \"{}\" date", uid));
             };
 
             Ok(Article {
@@ -180,42 +196,40 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
         .collect()
 }
 
-async fn extract_all() -> Result<(Vec<Article>, Vec<Box<GalnetError>>), Box<dyn Error>> {
+async fn extract_all() -> Result<(), Box<dyn Error>> {
     let html = fetch_text(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
     let links: Vec<String> = extract_date_links(&html);
-    let extraction_results = join_all(
-        links
-            .iter()
-            .map(|link| extract_page_articles(link, downloaded_uids)),
-    )
-    .await;
 
-    let mut articles = vec![];
-    let mut errors: Vec<Box<GalnetError>> = vec![];
-    for result in extraction_results {
-        match result {
-            Ok(mut page_articles) => articles.append(&mut page_articles),
-            Err(error) => errors.push(Box::new(error) as Box<GalnetError>),
+    let future_pages = links.iter().map(|link| extract_page(&link));
+    let mut page_extractions = join_all(future_pages).await;
+
+    let mut all_failed_pages = vec![];
+
+    fs::create_dir_all(EXTRACTED_FILES_LOCATION.clone())?;
+
+    for page_extraction in &mut page_extractions {
+        if page_extraction.errors.len() > 0 {
+            all_failed_pages.push(page_extraction.url.clone());
+        } else {
+            for article in &page_extraction.articles {
+                if let Err(cause) = serialize_to_file(&gen_article_filename(&article), &article) {
+                    page_extraction.errors.push(FileError {
+                        filename: gen_article_filename(&article),
+                        cause,
+                    });
+                    all_failed_pages.push(page_extraction.url.clone())
+                }
+            }
         }
     }
 
-    fs::create_dir_all(EXTRACT_LOCATION)?;
+    all_failed_pages.dedup();
 
-    let mut file_errors = articles
-        .iter()
-        .map(|article| serialize_to_file(&gen_article_filename(article), article))
-        .filter(|result| result.is_err())
-        .map(|error_result| {
-            Box::new(FileError {
-                filename: "".to_owned(),
-                cause: error_result.unwrap_err(),
-            }) // as Box<GalnetError>
-        })
-        .collect();
+    if all_failed_pages.len() > 0 {
+        serialize_to_file(FAILED_PAGES_FILE, &all_failed_pages)?;
+    }
 
-    errors.append(&mut file_errors);
-
-    Ok((articles, errors))
+    Ok(())
 }
 
 fn list_downloaded_articles(path: &str) -> Result<Paths, Box<dyn Error>> {
@@ -261,18 +275,10 @@ fn serialize_to_file(filename: &str, value: &impl Serialize) -> Result<(), Box<d
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (articles, failures) = extract_all().await?;
-    println!("{:#?}", articles);
-    println!("{:#?}", failures);
+    extract_all().await
 
-    println!(
-        "{}",
-        extract_galnet_url_uid("/galnet/uid/5fdcdca955fd67154d2f1b54").unwrap()
-    );
     // let resp = fetch_text("https://gist.githubusercontent.com/leodutra/6ce7397e0b8c20eb16f8949263e511c7/raw/galnet.html").await?;
     // let links = extract_date_links(&resp);
     // println!("{:#?}", links);
     // println!("{:#?}", extract_date_articles(&resp));
-
-    Ok(())
 }
