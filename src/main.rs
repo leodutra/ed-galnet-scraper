@@ -7,6 +7,7 @@ use glob::glob;
 use glob::Paths;
 use regex::Regex;
 use serde::Serialize;
+use std::{collections::HashMap, fs::ReadDir};
 use std::fs::{self, OpenOptions};
 use std::{collections::HashSet, error::Error};
 use std::{fmt, vec};
@@ -36,7 +37,9 @@ lazy_static! {
         Selector::parse(":scope > p").expect("Article content selector");
     static ref URL_UID_MATCHER: Regex = Regex::new(r"/uid/([^/#?]+)").expect("URL UID matcher");
     static ref FILENAME_UID_MATCHER: Regex =
-        Regex::new(r"(\w+).json").expect("Filename UID matcher");
+        Regex::new(r"[^-]+ - (\w+).json").expect("Filename UID matcher");
+    static ref ARTICLE_DATE_MATCHER: Regex =
+        Regex::new(r"(\d{2})\s(\w{3})\s(\d{4,})").expect("Article date matcher");
 }
 
 #[derive(Debug)]
@@ -89,15 +92,6 @@ async fn fetch_text(link: &str) -> Result<String, Box<dyn Error>> {
     Ok(reqwest::get(link).await?.text().await?)
 }
 
-fn get_element_text(element_ref: &ElementRef) -> String {
-    element_ref
-        .text()
-        .collect::<Vec<_>>()
-        .join("")
-        .trim()
-        .to_owned()
-}
-
 fn get_element_url(element_ref: &ElementRef) -> String {
     element_ref
         .value()
@@ -108,16 +102,6 @@ fn get_element_url(element_ref: &ElementRef) -> String {
 
 fn extract_galnet_url_uid(url: &str) -> Option<String> {
     URL_UID_MATCHER.captures(url).map(|cap| cap[1].into())
-}
-
-fn extract_date_links(html: &str) -> Vec<String> {
-    let fragment = Html::parse_document(html);
-    fragment
-        .select(&GALNET_DATE_LINK_SELECTOR)
-        .map(|element| element.value().attr("href"))
-        .filter(|href| href.is_some())
-        .map(|href| with_site_base_url(href.unwrap().trim()))
-        .collect()
 }
 
 #[derive(Default, Debug)]
@@ -154,6 +138,14 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
         Err(ParserError {
             cause: cause.into(),
         })
+    };
+    let get_element_text = |element_ref: &ElementRef| -> String {
+        element_ref
+            .text()
+            .collect::<Vec<_>>()
+            .join("")
+            .trim()
+            .to_owned()
     };
     Html::parse_document(html)
         .select(&ARTICLE_SELECTOR)
@@ -200,6 +192,15 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
 }
 
 async fn extract_all() -> Result<(), Box<dyn Error>> {
+    let extract_date_links = |html: &str| -> Vec<String> {
+        Html::parse_document(html)
+            .select(&GALNET_DATE_LINK_SELECTOR)
+            .map(|element| element.value().attr("href"))
+            .filter(|href| href.is_some())
+            .map(|href| with_site_base_url(href.unwrap().trim()))
+            .collect()
+    };
+
     let html = fetch_text(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
     let links: Vec<String> = extract_date_links(&html);
 
@@ -260,7 +261,9 @@ fn downloaded_uids() -> Result<HashSet<String>, Box<dyn Error>> {
 fn gen_article_filename(article: &Article) -> String {
     format!(
         "{}/{} - {}.json",
-        EXTRACTED_FILES_LOCATION.clone(), article.date, article.uid
+        EXTRACTED_FILES_LOCATION.clone(),
+        article.date,
+        article.uid
     )
 }
 
@@ -276,9 +279,61 @@ fn serialize_to_file(filename: &str, value: &impl Serialize) -> Result<(), Box<d
     Ok(())
 }
 
+fn list_downloaded_files() -> Result<Paths, Box<dyn Error>> {
+    Ok(glob(&(EXTRACTED_FILES_LOCATION.clone() + "/*.json"))?)
+}
+
+#[derive(Default, Debug)]
+struct GalnetDate {
+    day: String,
+    month: String,
+    year: String,
+}
+
+impl ToString for GalnetDate {
+    fn to_string(&self) -> String {
+        format!("{} {} {}", self.day, self.month, self.year)
+    }
+}
+
+fn list_downloaded_dates() -> Result<HashMap<String, GalnetDate>, Box<dyn Error>> {
+    let extract_date = |filename: String| -> Option<GalnetDate> {
+        if let Some(cap) = ARTICLE_DATE_MATCHER.captures(&filename) {
+            Some(GalnetDate {
+                day: cap[1].to_string(),
+                month: cap[2].to_string(),
+                year: cap[3].to_string(),
+            })
+        } else {
+            None
+        }
+    };
+
+    let mut dates = HashMap::new();
+
+    for entry in list_downloaded_files()? {
+        if let Ok(path) = entry?.into_os_string().into_string() {
+            extract_date(path).map(|date| dates.insert(date.to_string(), date));
+        }
+    }
+
+    Ok(dates)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    extract_all().await
+    // extract_all().await
+    // list_downloaded_files().unwrap().for_each(|x| println!("{:?}", x.unwrap().display()));
+
+    list_downloaded_dates()?.iter().map(|x| println!("{:?}", x));
+
+    // for entry in list_downloaded_files().unwrap() {
+    //     match entry {
+    //         Ok(path) => println!("{:?}", path.display()),
+    //         Err(e) => println!("{:?}", e),
+    //     }
+    // }
+    Ok(())
 
     // let resp = fetch_text("https://gist.githubusercontent.com/leodutra/6ce7397e0b8c20eb16f8949263e511c7/raw/galnet.html").await?;
     // let links = extract_date_links(&resp);
