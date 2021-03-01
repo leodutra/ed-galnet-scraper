@@ -6,7 +6,7 @@ use futures::future::join_all;
 use glob::glob;
 use glob::Paths;
 use regex::Regex;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use std::fs::{self, OpenOptions};
 use std::{collections::HashMap, convert::TryInto, fs::ReadDir};
 use std::{collections::HashSet, error::Error};
@@ -41,7 +41,7 @@ lazy_static! {
     static ref FILENAME_UID_MATCHER: Regex =
         Regex::new(r"[^-]+ - (\w+).json").expect("Filename UID matcher");
     static ref ARTICLE_DATE_MATCHER: Regex =
-        Regex::new(r"(\d{2})\s(\w{3})\s(\d{4,})").expect("Article date matcher");
+        Regex::new(r"(\d{2})[\s-](\w{3})[\s-](\d{4,})").expect("Article date matcher");
 }
 
 #[derive(Debug)]
@@ -284,6 +284,18 @@ fn serialize_to_file(filename: &str, value: &impl Serialize) -> Result<(), Box<d
     Ok(())
 }
 
+fn deserialize_from_file(filename: &str) -> Result<impl Deserialize, Box<dyn Error>> {
+    Ok(
+        serde_json::de::from_reader(
+            OpenOptions::new()
+                .read(true)
+                .truncate(true)
+                .create(true)
+                .open(filename)?
+        )?
+    )
+}
+
 fn list_downloaded_files() -> Result<Paths, Box<dyn Error>> {
     Ok(glob(&(EXTRACTED_FILES_LOCATION.clone() + "/*.json"))?)
 }
@@ -327,6 +339,8 @@ fn list_downloaded_dates() -> Result<HashSet<GalnetDate>, Box<dyn Error>> {
             extract_date(path).map(|date| dates.insert(date));
         }
     }
+
+    let failed_dates = deserialize_from_file(&FAILED_PAGES_FILE)?;
 
     Ok(dates)
 }
