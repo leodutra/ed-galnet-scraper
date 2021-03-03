@@ -284,7 +284,9 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
     });
 
     if downloaded_pages.len() > 0 {
-        serialize_to_file(&DOWNLOADED_PAGES_FILE, &downloaded_pages)?;
+        let mut serializated_list = downloaded_pages.iter().collect::<Vec<_>>();
+        serializated_list.sort();
+        serialize_to_file(&DOWNLOADED_PAGES_FILE, &serializated_list)?;
     }
     if failed_pages.len() > 0 {
         serialize_to_file(
