@@ -257,12 +257,20 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
 
     let mut failed_pages = vec![];
     let mut downloaded_pages = list_downloaded_pages()?;
+    println!(
+        "Downloaded pages before starting: {}",
+        downloaded_pages.len()
+    );
+
+    let extracted_links = extract_date_links(&html);
+    println!("Extracted links: {}", extracted_links.len());
 
     // TODO page extraction carry links, add to this list and continue
-    let links = extract_date_links(&html)
+    let links = extracted_links
         .difference(&downloaded_pages)
         .cloned()
         .collect::<HashSet<String>>();
+    println!("Total number of links to extract: {}", links.len());
 
     let future_pages = links.iter().map(|link| extract_page(&link));
     let mut page_extractions = join_all(future_pages).await;
