@@ -319,21 +319,21 @@ fn serialize_to_file(filename: &str, value: &impl Serialize) -> Result<(), Box<d
     Ok(())
 }
 
-fn deserialize_from_file<T>(filename: &str) -> Result<T, Box<dyn Error>>
+fn deserialize_from_file<T>(filename: &str) -> Result<Option<T>, Box<dyn Error>>
 where
     T: DeserializeOwned,
 {
-    Ok(serde_json::de::from_reader(
-        OpenOptions::new()
-            .read(true)
-            .truncate(true)
-            .create(true)
-            .open(filename)?,
-    )?)
+    match OpenOptions::new()
+    .read(true)
+    .open(filename) {
+        Ok(file) => Ok(Some(serde_json::de::from_reader(file)?)),
+        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(Box::new(e))
+    }
 }
 
 fn list_downloaded_pages() -> Result<HashSet<String>, Box<dyn Error>> {
-    deserialize_from_file(&DOWNLOADED_PAGES_FILE)
+    Ok(deserialize_from_file(&DOWNLOADED_PAGES_FILE)?.unwrap_or_default())
 }
 
 // fn list_downloaded_files() -> Result<Paths, Box<dyn Error>> {
