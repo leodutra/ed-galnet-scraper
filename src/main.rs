@@ -193,7 +193,8 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
         |url: &str| -> Option<String> { URL_UID_MATCHER.captures(url).map(|cap| cap[1].into()) };
     Html::parse_document(html)
         .select(&ARTICLE_SELECTOR)
-        .map(|article| {
+        .enumerate()
+        .map(|(i, article)| {
             let select_in_article = |selector| article.select(selector).next();
 
             let url = if let Some(url_el) = select_in_article(&ARTICLE_URL_SELECTOR) {
@@ -203,7 +204,7 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
             };
 
             let uid = if let Some(uid) = extract_galnet_url_uid(&url) {
-                uid
+                i.to_string() + "-" + &uid
             } else {
                 return parser_error(&format!("Couldn't find article \"{}\" uid", url));
             };
