@@ -379,7 +379,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //         Err(e) => println!("{:?}", e),
     //     }
     // }
-    Ok(())
+    // Ok(())
 
     // let resp = fetch_text("https://gist.githubusercontent.com/leodutra/6ce7397e0b8c20eb16f8949263e511c7/raw/galnet.html").await?;
     // let links = extract_date_links(&resp);
