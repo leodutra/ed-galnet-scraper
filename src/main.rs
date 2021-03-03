@@ -292,27 +292,26 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    if downloaded_pages.len() > 0 {
-        let mut serializated_list = downloaded_pages.iter().collect::<Vec<_>>();
-        serializated_list.sort();
-        serialize_to_file(&DOWNLOADED_PAGES_FILE, &serializated_list)?;
-    }
-    if failed_pages.len() > 0 {
-        serialize_to_file(
-            &FAILED_PAGES_FILE,
-            &failed_pages
-                .iter_mut()
-                .map(|page_extraction| ErroredPage {
-                    url: page_extraction.url.clone(),
-                    errors: page_extraction
-                        .errors
-                        .iter()
-                        .map(|e| e.to_string())
-                        .collect(),
-                })
-                .collect::<Vec<_>>(),
-        )?;
-    }
+    // DOWNLOADED
+    let mut serializated_list = downloaded_pages.iter().collect::<Vec<_>>();
+    serializated_list.sort();
+    serialize_to_file(&DOWNLOADED_PAGES_FILE, &serializated_list)?;
+    
+    // FAILED
+    serialize_to_file(
+        &FAILED_PAGES_FILE,
+        &failed_pages
+            .iter_mut()
+            .map(|page_extraction| ErroredPage {
+                url: page_extraction.url.clone(),
+                errors: page_extraction
+                    .errors
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect(),
+            })
+            .collect::<Vec<_>>(),
+    )?;
 
     Ok(())
 }
