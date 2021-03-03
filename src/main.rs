@@ -137,8 +137,8 @@ fn extract_date_links(html: &str) -> HashSet<String> {
 
 async fn extract_page(url: &str) -> PageExtraction {
     let mut articles = HashSet::new();
-    let mut errors = vec![];
     let mut links = HashSet::new();
+    let mut errors = vec![];
     match fetch_text(&url).await {
         Ok(html) => {
             extract_articles(&html)
