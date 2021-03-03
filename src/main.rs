@@ -63,6 +63,7 @@ impl PartialEq for Article {
 struct PageExtraction {
     url: String,
     articles: HashSet<Article>,
+    links: HashSet<String>,
     errors: Vec<GalnetError>,
 }
 
@@ -135,16 +136,23 @@ fn extract_date_links(html: &str) -> HashSet<String> {
 }
 
 async fn extract_page(url: &str) -> PageExtraction {
-    let mut articles = vec![];
+    let mut articles = HashSet::new();
     let mut errors = vec![];
-    let mut links = vec![];
+    let mut links = HashSet::new();
     match fetch_text(&url).await {
-        Ok(html) => extract_articles(&html)
-            .into_iter()
-            .for_each(|result| match result {
-                Ok(article) => articles.push(article),
-                Err(e) => errors.push(e),
-            }),
+        Ok(html) => {
+            extract_articles(&html)
+                .into_iter()
+                .for_each(|result| match result {
+                    Ok(article) => {
+                        articles.insert(article);
+                    }
+                    Err(e) => {
+                        errors.push(e);
+                    }
+                });
+            links = extract_date_links(&html);
+        }
         Err(e) => {
             errors = vec![ScraperError {
                 url: url.to_owned(),
@@ -155,6 +163,7 @@ async fn extract_page(url: &str) -> PageExtraction {
     PageExtraction {
         url: url.to_owned(),
         articles,
+        links,
         errors,
         ..Default::default()
     }
