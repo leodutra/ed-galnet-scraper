@@ -20,6 +20,7 @@ const EXTRACT_LOCATION: &'static str = "./galnet";
 
 lazy_static! {
     // FILES
+    static ref SUCCESSFUL_PAGES_FILE: String = String::from(EXTRACT_LOCATION) + "/successful-pages.json";
     static ref FAILED_PAGES_FILE: String = String::from(EXTRACT_LOCATION) + "/failed-pages.json";
     static ref EXTRACTED_FILES_LOCATION: String = String::from(EXTRACT_LOCATION) + "/files";
 
@@ -42,6 +43,21 @@ lazy_static! {
         Regex::new(r"[^-]+ - (\w+).json").expect("Filename UID matcher");
     static ref ARTICLE_DATE_MATCHER: Regex =
         Regex::new(r"(\d{2})[\s-](\w{3})[\s-](\d{4,})").expect("Article date matcher");
+}
+
+#[derive(Debug, Serialize)]
+struct Article {
+    uid: String,
+    title: String,
+    date: String,
+    url: String,
+    content: String,
+}
+#[derive(Default, Debug)]
+struct PageExtraction {
+    url: String,
+    articles: Vec<Article>,
+    errors: Vec<GalnetError>,
 }
 
 #[derive(Debug)]
@@ -77,15 +93,6 @@ impl fmt::Display for GalnetError {
     }
 }
 
-#[derive(Debug, Serialize)]
-struct Article {
-    uid: String,
-    title: String,
-    date: String,
-    url: String,
-    content: String,
-}
-
 fn with_site_base_url(url: &str) -> String {
     return ELITE_DANGEROUS_COMMUNITY_SITE.to_owned() + url;
 }
@@ -94,23 +101,12 @@ async fn fetch_text(link: &str) -> Result<String, Box<dyn Error>> {
     Ok(reqwest::get(link).await?.text().await?)
 }
 
-fn get_element_url(element_ref: &ElementRef) -> String {
-    element_ref
-        .value()
-        .attr("href")
-        .expect("Couldn't extract href attr")
-        .to_owned()
-}
-
-fn extract_galnet_url_uid(url: &str) -> Option<String> {
-    URL_UID_MATCHER.captures(url).map(|cap| cap[1].into())
-}
-
-#[derive(Default, Debug)]
-struct PageExtraction {
-    url: String,
-    articles: Vec<Article>,
-    errors: Vec<GalnetError>,
+fn extract_date_links(html: &str) -> Vec<String> {
+    Html::parse_document(html)
+        .select(&GALNET_DATE_LINK_SELECTOR)
+        .filter_map(|element| element.value().attr("href"))
+        .map(|href| with_site_base_url(href.trim()))
+        .collect()
 }
 
 async fn extract_page(url: &str) -> PageExtraction {
@@ -152,10 +148,21 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
             .trim()
             .to_owned()
     };
+    let get_element_url = |element_ref: &ElementRef| -> String {
+        element_ref
+            .value()
+            .attr("href")
+            .expect("Couldn't extract href attr")
+            .to_owned()
+    };
+    let extract_galnet_url_uid = |url: &str| -> Option<String> {
+        URL_UID_MATCHER.captures(url).map(|cap| cap[1].into())
+    };
     Html::parse_document(html)
         .select(&ARTICLE_SELECTOR)
         .map(|article| {
             let select_in_article = |selector| article.select(selector).next();
+            
             let url = if let Some(url_el) = select_in_article(&ARTICLE_URL_SELECTOR) {
                 with_site_base_url(&get_element_url(&url_el))
             } else {
@@ -180,32 +187,18 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
                 return parser_error(&format!("Couldn't find article \"{}\" date", uid));
             };
 
-            Ok(Article {
-                title,
-                date,
-                url,
-                uid,
-                content: get_element_text(
-                    &article
-                        .select(&ARTICLE_CONTENT_SELECTOR)
-                        .next()
-                        .expect("Scraped article content"),
-                ),
-            })
+            let content = if let Some(content_el) = select_in_article(&ARTICLE_CONTENT_SELECTOR) {
+                get_element_text(&content_el)
+            } else {
+                return parser_error(&format!("Couldn't find article \"{}\" content", uid));
+            };
+
+            Ok(Article {title, date, url, uid, content })
         })
         .collect()
 }
 
 async fn extract_all() -> Result<(), Box<dyn Error>> {
-    let extract_date_links = |html: &str| -> Vec<String> {
-        Html::parse_document(html)
-            .select(&GALNET_DATE_LINK_SELECTOR)
-            .map(|element| element.value().attr("href"))
-            .filter(|href| href.is_some())
-            .map(|href| with_site_base_url(href.unwrap().trim()))
-            .collect()
-    };
-
     let html = fetch_text(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
     let links: Vec<String> = extract_date_links(&html);
 
