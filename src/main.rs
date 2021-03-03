@@ -6,7 +6,7 @@ use futures::future::join_all;
 
 use regex::Regex;
 use serde::{de::DeserializeOwned, Serialize};
-use std::fs::{self, OpenOptions};
+use std::{convert::TryInto, fs::{self, OpenOptions}};
 use std::{collections::HashSet, error::Error};
 use std::{fmt, vec};
 
@@ -237,6 +237,12 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
         .collect()
 }
 
+#[derive(Debug, Serialize)]
+struct ErroredPage {
+    url: String,
+    errors: Vec<String>,
+}
+
 async fn extract_all() -> Result<(), Box<dyn Error>> {
     let gen_article_filename = |article: &Article| -> String {
         format!(
@@ -249,8 +255,10 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
 
     let html = fetch_text(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
 
-    let mut failed_pages = HashSet::new();
+    let mut failed_pages = vec![];
     let mut downloaded_pages = list_downloaded_pages()?;
+    
+    // TODO page extraction carry links, add to this list and continue 
     let links = extract_date_links(&html)
         .difference(&downloaded_pages)
         .cloned()
@@ -271,7 +279,7 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
         if page_extraction.errors.len() == 0 {
             downloaded_pages.insert(page_extraction.url.clone());
         } else {
-            failed_pages.insert(page_extraction.url.clone());
+            failed_pages.push(page_extraction);
         }
     });
 
@@ -279,7 +287,12 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
         serialize_to_file(&DOWNLOADED_PAGES_FILE, &downloaded_pages)?;
     }
     if failed_pages.len() > 0 {
-        serialize_to_file(&FAILED_PAGES_FILE, &failed_pages)?;
+        serialize_to_file(&FAILED_PAGES_FILE, &failed_pages.iter_mut().map(|page_extraction|
+            ErroredPage {
+                url: page_extraction.url.clone(),
+                errors: page_extraction.errors.iter().map(|e| e.to_string()).collect()
+            }
+        ).collect::<Vec<_>>())?;
     }
 
     Ok(())
