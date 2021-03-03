@@ -6,7 +6,7 @@ use futures::future::join_all;
 use glob::glob;
 use glob::Paths;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::{collections::HashSet, error::Error};
 use std::{fmt, vec};
@@ -19,7 +19,7 @@ const EXTRACT_LOCATION: &'static str = "./galnet";
 
 lazy_static! {
     // FILES
-    static ref SUCCESSFUL_PAGES_FILE: String = String::from(EXTRACT_LOCATION) + "/successful-pages.json";
+    static ref DOWNLOADED_PAGES_FILE: String = String::from(EXTRACT_LOCATION) + "/successful-pages.json";
     static ref FAILED_PAGES_FILE: String = String::from(EXTRACT_LOCATION) + "/failed-pages.json";
     static ref EXTRACTED_FILES_LOCATION: String = String::from(EXTRACT_LOCATION) + "/files";
 
@@ -38,10 +38,10 @@ lazy_static! {
     static ref URL_UID_MATCHER: Regex = Regex::new(r"/uid/([^/#?]+)").expect("URL UID matcher");
 
     // MATCHERS
-    static ref FILENAME_UID_MATCHER: Regex =
-        Regex::new(r"[^-]+ - (\w+).json").expect("Filename UID matcher");
-    static ref ARTICLE_DATE_MATCHER: Regex =
-        Regex::new(r"(\d{2})[\s-](\w{3})[\s-](\d{4,})").expect("Article date matcher");
+    // static ref FILENAME_UID_MATCHER: Regex =
+    //     Regex::new(r"[^-]+ - (\w+).json").expect("Filename UID matcher");
+    // static ref ARTICLE_DATE_MATCHER: Regex =
+    //     Regex::new(r"(\d{2})[\s-](\w{3})[\s-](\d{4,})").expect("Article date matcher");
 }
 
 #[derive(Debug, Serialize, Hash, Eq)]
@@ -249,14 +249,19 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
     };
 
     let html = fetch_text(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
-    let links = extract_date_links(&html);
+
+    let mut failed_pages = HashSet::new();
+    let mut downloaded_pages = list_downloaded_pages()?;
+    let links = extract_date_links(&html)
+        .difference(&downloaded_pages)
+        .cloned()
+        .collect::<HashSet<String>>();
 
     let future_pages = links.iter().map(|link| extract_page(&link));
     let mut page_extractions = join_all(future_pages).await;
 
     fs::create_dir_all(EXTRACTED_FILES_LOCATION.clone())?;
 
-    let mut successful_pages = HashSet::new();
     page_extractions.iter_mut().for_each(|page_extraction| {
         for article in &page_extraction.articles {
             let filename = gen_article_filename(article);
@@ -265,12 +270,17 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
             }
         }
         if page_extraction.errors.len() == 0 {
-            successful_pages.insert(page_extraction.url.clone());
+            downloaded_pages.insert(page_extraction.url.clone());
+        } else {
+            failed_pages.insert(page_extraction.url.clone());
         }
     });
 
-    if successful_pages.len() > 0 {
-        serialize_to_file(&SUCCESSFUL_PAGES_FILE, &successful_pages)?;
+    if downloaded_pages.len() > 0 {
+        serialize_to_file(&DOWNLOADED_PAGES_FILE, &downloaded_pages)?;
+    }
+    if failed_pages.len() > 0 {
+        serialize_to_file(&FAILED_PAGES_FILE, &failed_pages)?;
     }
 
     Ok(())
@@ -310,7 +320,10 @@ fn serialize_to_file(filename: &str, value: &impl Serialize) -> Result<(), Box<d
     Ok(())
 }
 
-fn deserialize_from_file(filename: &str) -> Result<impl Deserialize, Box<dyn Error>> {
+fn deserialize_from_file<T>(filename: &str) -> Result<T, Box<dyn Error>>
+where
+    T: DeserializeOwned,
+{
     Ok(serde_json::de::from_reader(
         OpenOptions::new()
             .read(true)
@@ -320,44 +333,46 @@ fn deserialize_from_file(filename: &str) -> Result<impl Deserialize, Box<dyn Err
     )?)
 }
 
-fn list_downloaded_files() -> Result<Paths, Box<dyn Error>> {
-    Ok(glob(&(EXTRACTED_FILES_LOCATION.clone() + "/*.json"))?)
+fn list_downloaded_pages() -> Result<HashSet<String>, Box<dyn Error>> {
+    deserialize_from_file(&DOWNLOADED_PAGES_FILE)
 }
 
-fn list_downloaded_dates() -> Result<HashSet<GalnetDate>, Box<dyn Error>> {
-    let extract_date = |filename: String| -> Option<GalnetDate> {
-        if let Some(cap) = ARTICLE_DATE_MATCHER.captures(&filename) {
-            Some(GalnetDate {
-                day: cap[1].to_string(),
-                month: cap[2].to_string(),
-                year: cap[3].to_string(),
-            })
-        } else {
-            None
-        }
-    };
+// fn list_downloaded_files() -> Result<Paths, Box<dyn Error>> {
+//     Ok(glob(&(EXTRACTED_FILES_LOCATION.clone() + "/*.json"))?)
+// }
 
-    let mut dates = HashSet::new();
+// fn list_downloaded_dates() -> Result<HashSet<GalnetDate>, Box<dyn Error>> {
+//     let extract_date = |filename: String| -> Option<GalnetDate> {
+//         if let Some(cap) = ARTICLE_DATE_MATCHER.captures(&filename) {
+//             Some(GalnetDate {
+//                 day: cap[1].to_string(),
+//                 month: cap[2].to_string(),
+//                 year: cap[3].to_string(),
+//             })
+//         } else {
+//             None
+//         }
+//     };
 
-    for entry in list_downloaded_files()? {
-        if let Ok(path) = entry?.into_os_string().into_string() {
-            extract_date(path).map(|date| dates.insert(date));
-        }
-    }
+//     let mut dates = HashSet::new();
 
-    let _failed_dates = deserialize_from_file(&FAILED_PAGES_FILE)?;
+//     for entry in list_downloaded_files()? {
+//         if let Ok(path) = entry?.into_os_string().into_string() {
+//             extract_date(path).map(|date| dates.insert(date));
+//         }
+//     }
 
-    Ok(dates)
-}
+//     Ok(dates)
+// }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     extract_all().await;
     // list_downloaded_files().unwrap().for_each(|x| println!("{:?}", x.unwrap().display()));
 
-    for entry in list_downloaded_dates()? {
-        println!("{:?}", entry);
-    }
+    // for entry in list_downloaded_dates()? {
+    //     println!("{:?}", entry);
+    // }
 
     // for entry in list_downloaded_files().unwrap() {
     //     match entry {
