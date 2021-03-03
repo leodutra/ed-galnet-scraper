@@ -206,7 +206,7 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
     let page_extractions = join_all(future_pages).await;
     let all_successful_pages = page_extractions.iter().fold(
         HashSet::new(), 
-        |mut cacc, page_extraction| {
+        |mut acc, page_extraction| {
             if page_extraction.errors.len() == 0 {
                 acc.insert(page_extraction.url.clone());
             }
