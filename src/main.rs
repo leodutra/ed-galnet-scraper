@@ -262,7 +262,7 @@ struct ErroredPage {
 async fn extract_all() -> Result<(), Box<dyn Error>> {
     let gen_article_filename = |article: &Article| -> String {
         format!(
-            "{}/{} - {}-{}.json",
+            "{}/{} - {} - {}.json",
             EXTRACTED_FILES_LOCATION.clone(),
             revert_galnet_date(&article.date),
             article.page_index,
