@@ -6,7 +6,7 @@ use futures::future::join_all;
 
 use regex::Regex;
 use serde::{de::DeserializeOwned, Serialize};
-use std::fs::{self, OpenOptions};
+use std::{collections::HashMap, fs::{self, OpenOptions}};
 use std::{collections::HashSet, error::Error};
 use std::{fmt, vec};
 
@@ -154,10 +154,10 @@ async fn extract_page(url: &str) -> PageExtraction {
             links = extract_date_links(&html);
         }
         Err(e) => {
-            errors = vec![ScraperError {
+            errors.push(ScraperError {
                 url: url.to_owned(),
                 cause: e,
-            }];
+            });
         }
     };
     PageExtraction {
@@ -259,7 +259,7 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
 
     let html = fetch_text(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
 
-    let mut failed_pages = vec![];
+    let mut failed_pages = HashMap::new();
     let mut downloaded_pages = list_downloaded_pages()?;
     println!(
         "Downloaded pages before starting: {}",
@@ -289,9 +289,19 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
             }
         }
         if page_extraction.errors.len() == 0 {
-            downloaded_pages.insert(page_extraction.url.clone());
+            let url = page_extraction.url.clone();
+            failed_pages.remove(&url);
+            downloaded_pages.insert(url);
         } else {
-            failed_pages.push(page_extraction);
+            let url = page_extraction.url.clone();
+            failed_pages.insert(url.clone(), ErroredPage {
+                url,
+                errors: page_extraction
+                    .errors
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect(),
+            });
         }
     });
 
@@ -301,20 +311,7 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
     serialize_to_file(&DOWNLOADED_PAGES_FILE, &serializated_list)?;
 
     // FAILED
-    serialize_to_file(
-        &FAILED_PAGES_FILE,
-        &failed_pages
-            .iter_mut()
-            .map(|page_extraction| ErroredPage {
-                url: page_extraction.url.clone(),
-                errors: page_extraction
-                    .errors
-                    .iter()
-                    .map(|e| e.to_string())
-                    .collect(),
-            })
-            .collect::<Vec<_>>(),
-    )?;
+    serialize_to_file(&FAILED_PAGES_FILE, &failed_pages)?;
 
     Ok(())
 }
