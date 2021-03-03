@@ -146,6 +146,7 @@ async fn extract_page(url: &str) -> PageExtraction {
     let mut errors = vec![];
     match fetch_text(&url).await {
         Ok(html) => {
+            links = extract_date_links(&html);
             extract_articles(&html)
                 .into_iter()
                 .for_each(|result| match result {
@@ -156,11 +157,12 @@ async fn extract_page(url: &str) -> PageExtraction {
                         errors.push(e);
                     }
                 });
-            links = extract_date_links(&html);
             if articles.len() == 0 {
                 errors.push(ScraperError {
                     url: url.to_owned(),
-                    cause: Box::new(ParserError{cause: "Could not find any article for this page".to_string()})
+                    cause: Box::new(ParserError {
+                        cause: format!("Could not find any article for this page:\n{}", &html),
+                    }),
                 });
             }
         }
