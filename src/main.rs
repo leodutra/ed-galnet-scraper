@@ -8,7 +8,7 @@ use glob::Paths;
 use regex::Regex;
 use serde::{Serialize, Deserialize};
 use std::fs::{self, OpenOptions};
-use std::{collections::HashMap, convert::TryInto, fs::ReadDir};
+
 use std::{collections::HashSet, error::Error};
 use std::{fmt, vec};
 
@@ -322,7 +322,7 @@ fn list_downloaded_dates() -> Result<HashSet<GalnetDate>, Box<dyn Error>> {
         }
     }
 
-    let failed_dates = deserialize_from_file(&FAILED_PAGES_FILE)?;
+    let _failed_dates = deserialize_from_file(&FAILED_PAGES_FILE)?;
 
     Ok(dates)
 }
