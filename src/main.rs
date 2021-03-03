@@ -46,6 +46,7 @@ lazy_static! {
 #[derive(Debug, Serialize, Hash, Eq)]
 struct Article {
     uid: String,
+    page_index: usize,
     title: String,
     date: String,
     url: String,
@@ -194,7 +195,7 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
     Html::parse_document(html)
         .select(&ARTICLE_SELECTOR)
         .enumerate()
-        .map(|(i, article)| {
+        .map(|(page_index, article)| {
             let select_in_article = |selector| article.select(selector).next();
 
             let url = if let Some(url_el) = select_in_article(&ARTICLE_URL_SELECTOR) {
@@ -204,7 +205,7 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
             };
 
             let uid = if let Some(uid) = extract_galnet_url_uid(&url) {
-                i.to_string() + "-" + &uid
+                uid
             } else {
                 return parser_error(&format!("Couldn't find article \"{}\" uid", url));
             };
@@ -228,10 +229,11 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
             };
 
             Ok(Article {
+                uid,
+                page_index,
                 title,
                 date,
                 url,
-                uid,
                 content,
             })
         })
@@ -247,9 +249,10 @@ struct ErroredPage {
 async fn extract_all() -> Result<(), Box<dyn Error>> {
     let gen_article_filename = |article: &Article| -> String {
         format!(
-            "{}/{} - {}.json",
+            "{}/{} - {}-{}.json",
             EXTRACTED_FILES_LOCATION.clone(),
             revert_galnet_date(&article.date),
+            article.page_index,
             article.uid
         )
     };
@@ -296,7 +299,7 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
     let mut serializated_list = downloaded_pages.iter().collect::<Vec<_>>();
     serializated_list.sort();
     serialize_to_file(&DOWNLOADED_PAGES_FILE, &serializated_list)?;
-    
+
     // FAILED
     serialize_to_file(
         &FAILED_PAGES_FILE,
