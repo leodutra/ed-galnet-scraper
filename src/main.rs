@@ -6,9 +6,8 @@ use futures::future::join_all;
 use glob::glob;
 use glob::Paths;
 use regex::Regex;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
-
 use std::{collections::HashSet, error::Error};
 use std::{fmt, vec};
 
@@ -45,7 +44,7 @@ lazy_static! {
         Regex::new(r"(\d{2})[\s-](\w{3})[\s-](\d{4,})").expect("Article date matcher");
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Hash, Eq)]
 struct Article {
     uid: String,
     title: String,
@@ -53,10 +52,17 @@ struct Article {
     url: String,
     content: String,
 }
+
+impl PartialEq for Article {
+    fn eq(&self, other: &Self) -> bool {
+        self.uid == other.uid
+    }
+}
+
 #[derive(Default, Debug)]
 struct PageExtraction {
     url: String,
-    articles: Vec<Article>,
+    articles: HashSet<Article>,
     errors: Vec<GalnetError>,
 }
 
@@ -73,6 +79,25 @@ enum GalnetError {
         url: String,
         cause: Box<dyn Error>,
     },
+}
+
+#[derive(Default, Debug, Hash, Eq)]
+struct GalnetDate {
+    day: String,
+    month: String,
+    year: String,
+}
+
+impl ToString for GalnetDate {
+    fn to_string(&self) -> String {
+        format!("{} {} {}", self.day, self.month, self.year)
+    }
+}
+
+impl PartialEq for GalnetDate {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_string() == other.to_string()
+    }
 }
 
 use GalnetError::{FileError, ParserError, ScraperError};
@@ -101,7 +126,7 @@ async fn fetch_text(link: &str) -> Result<String, Box<dyn Error>> {
     Ok(reqwest::get(link).await?.text().await?)
 }
 
-fn extract_date_links(html: &str) -> Vec<String> {
+fn extract_date_links(html: &str) -> HashSet<String> {
     Html::parse_document(html)
         .select(&GALNET_DATE_LINK_SELECTOR)
         .filter_map(|element| element.value().attr("href"))
@@ -112,6 +137,7 @@ fn extract_date_links(html: &str) -> Vec<String> {
 async fn extract_page(url: &str) -> PageExtraction {
     let mut articles = vec![];
     let mut errors = vec![];
+    let mut links = vec![];
     match fetch_text(&url).await {
         Ok(html) => extract_articles(&html)
             .into_iter()
@@ -155,14 +181,13 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
             .expect("Couldn't extract href attr")
             .to_owned()
     };
-    let extract_galnet_url_uid = |url: &str| -> Option<String> {
-        URL_UID_MATCHER.captures(url).map(|cap| cap[1].into())
-    };
+    let extract_galnet_url_uid =
+        |url: &str| -> Option<String> { URL_UID_MATCHER.captures(url).map(|cap| cap[1].into()) };
     Html::parse_document(html)
         .select(&ARTICLE_SELECTOR)
         .map(|article| {
             let select_in_article = |selector| article.select(selector).next();
-            
+
             let url = if let Some(url_el) = select_in_article(&ARTICLE_URL_SELECTOR) {
                 with_site_base_url(&get_element_url(&url_el))
             } else {
@@ -193,66 +218,76 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
                 return parser_error(&format!("Couldn't find article \"{}\" content", uid));
             };
 
-            Ok(Article {title, date, url, uid, content })
+            Ok(Article {
+                title,
+                date,
+                url,
+                uid,
+                content,
+            })
         })
         .collect()
 }
 
 async fn extract_all() -> Result<(), Box<dyn Error>> {
+    let gen_article_filename = |article: &Article| -> String {
+        format!(
+            "{}/{} - {}.json",
+            EXTRACTED_FILES_LOCATION.clone(),
+            article.date,
+            article.uid
+        )
+    };
+
     let html = fetch_text(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
-    let links: Vec<String> = extract_date_links(&html);
+    let links = extract_date_links(&html);
 
     let future_pages = links.iter().map(|link| extract_page(&link));
-    let page_extractions = join_all(future_pages).await;
-    let all_successful_pages = page_extractions.iter().fold(
-        HashSet::new(), 
-        |mut acc, page_extraction| {
-            if page_extraction.errors.len() == 0 {
-                acc.insert(page_extraction.url.clone());
-            }
-            acc
-        }
-    );
+    let mut page_extractions = join_all(future_pages).await;
 
     fs::create_dir_all(EXTRACTED_FILES_LOCATION.clone())?;
 
-    if all_successful_pages.len() > 0 {
-        serialize_to_file(&SUCCESSFUL_PAGES_FILE, &all_successful_pages)?;
+    let mut successful_pages = HashSet::new();
+    page_extractions.iter_mut().for_each(|page_extraction| {
+        for article in &page_extraction.articles {
+            let filename = gen_article_filename(article);
+            if let Err(cause) = serialize_to_file(&filename, article) {
+                page_extraction.errors.push(FileError { filename, cause });
+            }
+        }
+        if page_extraction.errors.len() == 0 {
+            successful_pages.insert(page_extraction.url.clone());
+        }
+    });
+
+    if successful_pages.len() > 0 {
+        serialize_to_file(&SUCCESSFUL_PAGES_FILE, &successful_pages)?;
     }
 
     Ok(())
 }
 
-fn list_downloaded_articles(path: &str) -> Result<Paths, Box<dyn Error>> {
-    Ok(glob(&format!("{}/*.json", path))?)
-}
+// fn list_downloaded_articles(path: &str) -> Result<Paths, Box<dyn Error>> {
+//     Ok(glob(&format!("{}/*.json", path))?)
+// }
 
-fn extract_filename_uid(filename: &str) -> Option<String> {
-    FILENAME_UID_MATCHER
-        .captures(filename)
-        .map(|captures| captures[1].into())
-}
+// fn extract_filename_uid(filename: &str) -> Option<String> {
+//     FILENAME_UID_MATCHER
+//         .captures(filename)
+//         .map(|captures| captures[1].into())
+// }
 
-fn downloaded_uids() -> Result<HashSet<String>, Box<dyn Error>> {
-    let downloaded_articles = list_downloaded_articles(&EXTRACTED_FILES_LOCATION)?;
-    let mut downloaded_uids = HashSet::new();
-    for entry in downloaded_articles {
-        entry?
-            .to_str()
-            .and_then(extract_filename_uid)
-            .map(|uid| downloaded_uids.insert(uid));
-    }
-    Ok(downloaded_uids)
-}
-
-fn gen_article_filename(article: &Article) -> String {
-    format!(
-        "{}/{} - {}.json",
-        EXTRACTED_FILES_LOCATION.clone(),
-        article.date,
-        article.uid
-    )
-}
+// fn downloaded_uids() -> Result<HashSet<String>, Box<dyn Error>> {
+//     let downloaded_articles = list_downloaded_articles(&EXTRACTED_FILES_LOCATION)?;
+//     let mut downloaded_uids = HashSet::new();
+//     for entry in downloaded_articles {
+//         entry?
+//             .to_str()
+//             .and_then(extract_filename_uid)
+//             .map(|uid| downloaded_uids.insert(uid));
+//     }
+//     Ok(downloaded_uids)
+// }
 
 fn serialize_to_file(filename: &str, value: &impl Serialize) -> Result<(), Box<dyn Error>> {
     serde_json::ser::to_writer(
@@ -267,38 +302,17 @@ fn serialize_to_file(filename: &str, value: &impl Serialize) -> Result<(), Box<d
 }
 
 fn deserialize_from_file(filename: &str) -> Result<impl Deserialize, Box<dyn Error>> {
-    Ok(
-        serde_json::de::from_reader(
-            OpenOptions::new()
-                .read(true)
-                .truncate(true)
-                .create(true)
-                .open(filename)?
-        )?
-    )
+    Ok(serde_json::de::from_reader(
+        OpenOptions::new()
+            .read(true)
+            .truncate(true)
+            .create(true)
+            .open(filename)?,
+    )?)
 }
 
 fn list_downloaded_files() -> Result<Paths, Box<dyn Error>> {
     Ok(glob(&(EXTRACTED_FILES_LOCATION.clone() + "/*.json"))?)
-}
-
-#[derive(Default, Debug, Hash, Eq)]
-struct GalnetDate {
-    day: String,
-    month: String,
-    year: String,
-}
-
-impl ToString for GalnetDate {
-    fn to_string(&self) -> String {
-        format!("{} {} {}", self.day, self.month, self.year)
-    }
-}
-
-impl PartialEq for GalnetDate {
-    fn eq(&self, other: &Self) -> bool {
-        self.to_string() == other.to_string()
-    }
 }
 
 fn list_downloaded_dates() -> Result<HashSet<GalnetDate>, Box<dyn Error>> {
