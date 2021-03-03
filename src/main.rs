@@ -203,32 +203,21 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
     let links: Vec<String> = extract_date_links(&html);
 
     let future_pages = links.iter().map(|link| extract_page(&link));
-    let mut page_extractions = join_all(future_pages).await;
-
-    let mut all_failed_pages = vec![];
+    let page_extractions = join_all(future_pages).await;
+    let all_successful_pages = page_extractions.iter().fold(
+        HashSet::new(), 
+        |mut cacc, page_extraction| {
+            if page_extraction.errors.len() == 0 {
+                acc.insert(page_extraction.url.clone());
+            }
+            acc
+        }
+    );
 
     fs::create_dir_all(EXTRACTED_FILES_LOCATION.clone())?;
 
-    for page_extraction in &mut page_extractions {
-        if page_extraction.errors.len() > 0 {
-            all_failed_pages.push(page_extraction.url.clone());
-        } else {
-            for article in &page_extraction.articles {
-                if let Err(cause) = serialize_to_file(&gen_article_filename(&article), &article) {
-                    page_extraction.errors.push(FileError {
-                        filename: gen_article_filename(&article),
-                        cause,
-                    });
-                    all_failed_pages.push(page_extraction.url.clone())
-                }
-            }
-        }
-    }
-
-    // all_failed_pages.dedup
-
-    if all_failed_pages.len() > 0 {
-        serialize_to_file(&FAILED_PAGES_FILE, &all_failed_pages)?;
+    if all_successful_pages.len() > 0 {
+        serialize_to_file(&SUCCESSFUL_PAGES_FILE, &all_successful_pages)?;
     }
 
     Ok(())
