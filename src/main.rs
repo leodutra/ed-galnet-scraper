@@ -8,7 +8,6 @@ use regex::Regex;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{collections::HashSet, error::Error};
 use std::{
-    convert::TryInto,
     fs::{self, OpenOptions},
 };
 use std::{fmt, vec};
