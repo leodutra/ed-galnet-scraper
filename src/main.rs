@@ -6,10 +6,8 @@ use futures::future::join_all;
 
 use regex::Regex;
 use serde::{de::DeserializeOwned, Serialize};
+use std::fs::{self, OpenOptions};
 use std::{collections::HashSet, error::Error};
-use std::{
-    fs::{self, OpenOptions},
-};
 use std::{fmt, vec};
 
 use scraper::{ElementRef, Html, Selector};
@@ -39,10 +37,10 @@ lazy_static! {
     static ref URL_UID_MATCHER: Regex = Regex::new(r"/uid/([^/#?]+)").expect("URL UID matcher");
 
     // MATCHERS
+    static ref ARTICLE_DATE_MATCHER: Regex =
+        Regex::new(r"(\d{2})[\s-](\w{3})[\s-](\d{4,})").expect("Article date matcher");
     // static ref FILENAME_UID_MATCHER: Regex =
     //     Regex::new(r"[^-]+ - (\w+).json").expect("Filename UID matcher");
-    // static ref ARTICLE_DATE_MATCHER: Regex =
-    //     Regex::new(r"(\d{2})[\s-](\w{3})[\s-](\d{4,})").expect("Article date matcher");
 }
 
 #[derive(Debug, Serialize, Hash, Eq)]
@@ -250,7 +248,7 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
         format!(
             "{}/{} - {}.json",
             EXTRACTED_FILES_LOCATION.clone(),
-            article.date,
+            revert_galnet_date(&article.date),
             article.uid
         )
     };
@@ -357,6 +355,14 @@ fn list_downloaded_pages() -> Result<HashSet<String>, Box<dyn Error>> {
     Ok(deserialize_from_file(&DOWNLOADED_PAGES_FILE)?.unwrap_or_default())
 }
 
+fn revert_galnet_date(date: &str) -> String {
+    if let Some(cap) = ARTICLE_DATE_MATCHER.captures(date) {
+        String::new() + &cap[3] + " " + &cap[2] + " " + &cap[1]
+    } else {
+        date.to_owned()
+    }
+}
+
 // fn list_downloaded_files() -> Result<Paths, Box<dyn Error>> {
 //     Ok(glob(&(EXTRACTED_FILES_LOCATION.clone() + "/*.json"))?)
 // }
@@ -389,6 +395,9 @@ fn list_downloaded_pages() -> Result<HashSet<String>, Box<dyn Error>> {
 async fn main() -> Result<(), Box<dyn Error>> {
     extract_all().await
     // list_downloaded_files().unwrap().for_each(|x| println!("{:?}", x.unwrap().display()));
+
+    // println!("{}", revert_galnet_date("01 SET 3301"));
+    // Ok(())
 
     // for entry in list_downloaded_dates()? {
     //     println!("{:?}", entry);
