@@ -6,7 +6,10 @@ use futures::future::join_all;
 
 use regex::Regex;
 use serde::{de::DeserializeOwned, Serialize};
-use std::{collections::HashMap, fs::{self, OpenOptions}};
+use std::{
+    collections::HashMap,
+    fs::{self, OpenOptions},
+};
 use std::{collections::HashSet, error::Error};
 use std::{fmt, vec};
 
@@ -294,14 +297,17 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
             downloaded_pages.insert(url);
         } else {
             let url = page_extraction.url.clone();
-            failed_pages.insert(url.clone(), ErroredPage {
-                url,
-                errors: page_extraction
-                    .errors
-                    .iter()
-                    .map(|e| e.to_string())
-                    .collect(),
-            });
+            failed_pages.insert(
+                url.clone(),
+                ErroredPage {
+                    url,
+                    errors: page_extraction
+                        .errors
+                        .iter()
+                        .map(|e| e.to_string())
+                        .collect(),
+                },
+            );
         }
     });
 
