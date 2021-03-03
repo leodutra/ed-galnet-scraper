@@ -4,7 +4,7 @@ extern crate lazy_static;
 use fmt::Debug;
 use futures::future::join_all;
 
-use regex::Regex;
+// use regex::Regex;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fs::{self, OpenOptions};
 use std::{collections::HashSet, error::Error};
