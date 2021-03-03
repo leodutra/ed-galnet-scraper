@@ -366,7 +366,7 @@ fn list_downloaded_pages() -> Result<HashSet<String>, Box<dyn Error>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    extract_all().await;
+    extract_all().await
     // list_downloaded_files().unwrap().for_each(|x| println!("{:?}", x.unwrap().display()));
 
     // for entry in list_downloaded_dates()? {
