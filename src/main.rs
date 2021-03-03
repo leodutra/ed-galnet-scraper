@@ -85,6 +85,8 @@ enum GalnetError {
     },
 }
 
+impl Error for GalnetError {}
+
 #[derive(Default, Debug, Hash, Eq)]
 struct GalnetDate {
     day: String,
@@ -155,6 +157,12 @@ async fn extract_page(url: &str) -> PageExtraction {
                     }
                 });
             links = extract_date_links(&html);
+            if articles.len() == 0 {
+                errors.push(ScraperError {
+                    url: url.to_owned(),
+                    cause: Box::new(ParserError{cause: "Could not find any article for this page".to_string()})
+                });
+            }
         }
         Err(e) => {
             errors.push(ScraperError {
