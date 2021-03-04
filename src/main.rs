@@ -87,6 +87,8 @@ enum GalnetError {
 
 impl Error for GalnetError {}
 
+use GalnetError::{FileError, ParserError, ScraperError};
+
 #[derive(Default, Debug, Hash, Eq)]
 struct GalnetDate {
     day: String,
@@ -105,8 +107,6 @@ impl PartialEq for GalnetDate {
         self.to_string() == other.to_string()
     }
 }
-
-use GalnetError::{FileError, ParserError, ScraperError};
 
 impl fmt::Display for GalnetError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
