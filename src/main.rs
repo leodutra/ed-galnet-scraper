@@ -162,7 +162,7 @@ async fn extract_page(url: &str) -> PageExtraction {
                         errors.push(e);
                     }
                 });
-            if articles.len() == 0 {
+            if articles.is_empty() {
                 errors.push(GalnetError::ScraperError {
                     url: url.to_owned(),
                     cause: Box::new(GalnetError::ParserError {
@@ -308,7 +308,7 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
                     .push(GalnetError::FileError { filename, cause });
             }
         }
-        if page_extraction.errors.len() == 0 {
+        if page_extraction.errors.is_empty() {
             let url = page_extraction.url.clone();
             failed_pages.remove(&url);
             downloaded_pages.insert(url);
@@ -390,7 +390,7 @@ fn list_downloaded_pages() -> Result<HashSet<String>, Box<dyn Error>> {
 
 fn revert_galnet_date(date: &str) -> String {
     if let Some(cap) = ARTICLE_DATE_MATCHER.captures(date) {
-        String::new() + &cap[3] + " " + &cap[2] + " " + &cap[1]
+        format!("{} {} {}", &cap[3], &cap[2], &cap[1])
     } else {
         date.to_owned()
     }
@@ -422,7 +422,7 @@ fn revert_galnet_date(date: &str) -> String {
 //     }
 
 //     Ok(dates)
-// }
+// }Vec
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
