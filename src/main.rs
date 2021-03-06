@@ -9,15 +9,16 @@ use serde::{de::DeserializeOwned, Serialize};
 use std::{
     collections::HashMap,
     fs::{self, OpenOptions},
+    hash::{Hash, Hasher},
 };
 use std::{collections::HashSet, error::Error};
 use std::{fmt, vec};
 
 use scraper::{ElementRef, Html, Selector};
 
-const ELITE_DANGEROUS_COMMUNITY_SITE: &'static str = "https://community.elitedangerous.com";
+const ELITE_DANGEROUS_COMMUNITY_SITE: &str = "https://community.elitedangerous.com";
 
-const EXTRACT_LOCATION: &'static str = "./galnet";
+const EXTRACT_LOCATION: &str = "./galnet";
 
 lazy_static! {
     // FILES
@@ -46,7 +47,7 @@ lazy_static! {
     //     Regex::new(r"[^-]+ - (\w+).json").expect("Filename UID matcher");
 }
 
-#[derive(Debug, Serialize, Hash, Eq)]
+#[derive(Debug, Serialize, Eq)]
 struct Article {
     uid: String,
     page_index: usize,
@@ -54,6 +55,12 @@ struct Article {
     date: String,
     url: String,
     content: String,
+}
+
+impl Hash for Article {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        self.uid.hash(hasher);
+    }
 }
 
 impl PartialEq for Article {
@@ -87,8 +94,6 @@ enum GalnetError {
 
 impl Error for GalnetError {}
 
-use GalnetError::{FileError, ParserError, ScraperError};
-
 #[derive(Default, Debug, Hash, Eq)]
 struct GalnetDate {
     day: String,
@@ -111,13 +116,13 @@ impl PartialEq for GalnetDate {
 impl fmt::Display for GalnetError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            FileError { filename, cause } => {
+            GalnetError::FileError { filename, cause } => {
                 write!(f, "Error while scraping from \"{}\": {}", filename, cause)
             }
-            ParserError { cause } => {
+            GalnetError::ParserError { cause } => {
                 write!(f, "Error while parsing: {}", cause)
             }
-            ScraperError { url, cause } => {
+            GalnetError::ScraperError { url, cause } => {
                 write!(f, "Error while scraping from \"{}\": {}", url, cause)
             }
         }
@@ -158,16 +163,16 @@ async fn extract_page(url: &str) -> PageExtraction {
                     }
                 });
             if articles.len() == 0 {
-                errors.push(ScraperError {
+                errors.push(GalnetError::ScraperError {
                     url: url.to_owned(),
-                    cause: Box::new(ParserError {
+                    cause: Box::new(GalnetError::ParserError {
                         cause: format!("Could not find any article for this page:\n{}", &html),
                     }),
                 });
             }
         }
         Err(e) => {
-            errors.push(ScraperError {
+            errors.push(GalnetError::ScraperError {
                 url: url.to_owned(),
                 cause: e,
             });
@@ -184,7 +189,7 @@ async fn extract_page(url: &str) -> PageExtraction {
 
 fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
     let parser_error = |cause: &str| {
-        Err(ParserError {
+        Err(GalnetError::ParserError {
             cause: cause.into(),
         })
     };
@@ -298,7 +303,9 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
         for article in &page_extraction.articles {
             let filename = gen_article_filename(article);
             if let Err(cause) = serialize_to_file(&filename, article) {
-                page_extraction.errors.push(FileError { filename, cause });
+                page_extraction
+                    .errors
+                    .push(GalnetError::FileError { filename, cause });
             }
         }
         if page_extraction.errors.len() == 0 {
