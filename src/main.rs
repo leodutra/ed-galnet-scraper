@@ -264,7 +264,7 @@ struct ErroredPage {
     errors: Vec<String>,
 }
 
-async fn extract_all() -> Result<(), Box<dyn Error>> {
+async fn extract_page_to_file(url: &str) -> PageExtraction {
     let gen_article_filename = |article: &Article| -> String {
         format!(
             "{}/{} - {} - {}.json",
@@ -274,7 +274,19 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
             article.uid
         )
     };
+    let mut page_extraction = extract_page(url).await;
+    for article in &page_extraction.articles {
+        let filename = gen_article_filename(article);
+        if let Err(cause) = serialize_to_file(&filename, article) {
+            page_extraction
+                .errors
+                .push(GalnetError::FileError { filename, cause });
+        }
+    }
+    page_extraction
+}
 
+async fn extract_all(sequentially: bool) -> Result<(), Box<dyn Error>> {
     let html = fetch_text(ELITE_DANGEROUS_COMMUNITY_SITE).await?;
 
     let mut failed_pages = HashMap::new();
@@ -294,20 +306,21 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
         .collect::<HashSet<String>>();
     println!("Total number of links to extract: {}", links.len());
 
-    let future_pages = links.iter().map(|link| extract_page(&link));
-    let mut page_extractions = join_all(future_pages).await;
-
     fs::create_dir_all(EXTRACTED_FILES_LOCATION.clone())?;
 
-    page_extractions.iter_mut().for_each(|page_extraction| {
-        for article in &page_extraction.articles {
-            let filename = gen_article_filename(article);
-            if let Err(cause) = serialize_to_file(&filename, article) {
-                page_extraction
-                    .errors
-                    .push(GalnetError::FileError { filename, cause });
-            }
+    let mut page_extractions;
+
+    if sequentially {
+        page_extractions = vec![];
+        for link in links {
+            page_extractions.push(extract_page_to_file(&link).await);
         }
+    } else {
+        let future_pages = links.iter().map(|link| extract_page(&link));
+        page_extractions = join_all(future_pages).await;
+    }
+
+    page_extractions.iter_mut().for_each(|page_extraction| {
         if page_extraction.errors.is_empty() {
             let url = page_extraction.url.clone();
             failed_pages.remove(&url);
@@ -329,9 +342,9 @@ async fn extract_all() -> Result<(), Box<dyn Error>> {
     });
 
     // DOWNLOADED
-    let mut serializated_list = downloaded_pages.iter().collect::<Vec<_>>();
-    serializated_list.sort();
-    serialize_to_file(&DOWNLOADED_PAGES_FILE, &serializated_list)?;
+    let mut downloaded_pages = downloaded_pages.iter().collect::<Vec<_>>();
+    downloaded_pages.sort();
+    serialize_to_file(&DOWNLOADED_PAGES_FILE, &downloaded_pages)?;
 
     // FAILED
     serialize_to_file(&FAILED_PAGES_FILE, &failed_pages)?;
@@ -426,7 +439,7 @@ fn revert_galnet_date(date: &str) -> String {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    extract_all().await
+    extract_all(false).await
     // list_downloaded_files().unwrap().for_each(|x| println!("{:?}", x.unwrap().display()));
 
     // println!("{}", revert_galnet_date("01 SET 3301"));
