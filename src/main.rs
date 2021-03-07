@@ -440,22 +440,6 @@ fn revert_galnet_date(date: &str) -> String {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     extract_all(false).await
-    // list_downloaded_files().unwrap().for_each(|x| println!("{:?}", x.unwrap().display()));
-
-    // println!("{}", revert_galnet_date("01 SET 3301"));
-    // Ok(())
-
-    // for entry in list_downloaded_dates()? {
-    //     println!("{:?}", entry);
-    // }
-
-    // for entry in list_downloaded_files().unwrap() {
-    //     match entry {
-    //         Ok(path) => println!("{:?}", path.display()),
-    //         Err(e) => println!("{:?}", e),
-    //     }
-    // }
-    // Ok(())
 
     // let resp = fetch_text("https://gist.githubusercontent.com/leodutra/6ce7397e0b8c20eb16f8949263e511c7/raw/galnet.html").await?;
     // let links = extract_date_links(&resp);
