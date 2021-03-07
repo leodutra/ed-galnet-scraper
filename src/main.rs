@@ -342,12 +342,18 @@ async fn extract_all(sequentially: bool) -> Result<(), Box<dyn Error>> {
     });
 
     // DOWNLOADED
-    let mut downloaded_pages = downloaded_pages.iter().collect::<Vec<_>>();
-    downloaded_pages.sort();
-    serialize_to_file(&DOWNLOADED_PAGES_FILE, &downloaded_pages)?;
+    {
+        let mut downloaded_pages = downloaded_pages.iter().collect::<Vec<_>>();
+        downloaded_pages.sort();
+        serialize_to_file(&DOWNLOADED_PAGES_FILE, &downloaded_pages)?;
+    }
 
     // FAILED
-    serialize_to_file(&FAILED_PAGES_FILE, &failed_pages)?;
+    {
+        let mut failed_pages = failed_pages.iter().collect::<Vec<_>>();
+        failed_pages.sort_by_key(|k| k.0);
+        serialize_to_file(&FAILED_PAGES_FILE, &failed_pages)?;
+    }
 
     Ok(())
 }
