@@ -352,45 +352,23 @@ async fn extract_all(sequentially: bool) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// fn list_downloaded_articles(path: &str) -> Result<Paths, Box<dyn Error>> {
-//     Ok(glob(&format!("{}/*.json", path))?)
-// }
-
-// fn extract_filename_uid(filename: &str) -> Option<String> {
-//     FILENAME_UID_MATCHER
-//         .captures(filename)
-//         .map(|captures| captures[1].into())
-// }
-
-// fn downloaded_uids() -> Result<HashSet<String>, Box<dyn Error>> {
-//     let downloaded_articles = list_downloaded_articles(&EXTRACTED_FILES_LOCATION)?;
-//     let mut downloaded_uids = HashSet::new();
-//     for entry in downloaded_articles {
-//         entry?
-//             .to_str()
-//             .and_then(extract_filename_uid)
-//             .map(|uid| downloaded_uids.insert(uid));
-//     }
-//     Ok(downloaded_uids)
-// }
-
-fn serialize_to_file(filename: &str, value: &impl Serialize) -> Result<(), Box<dyn Error>> {
+fn serialize_to_file(filepath: &str, value: &impl Serialize) -> Result<(), Box<dyn Error>> {
     serde_json::ser::to_writer(
         OpenOptions::new()
             .write(true)
             .truncate(true)
             .create(true)
-            .open(filename)?,
+            .open(filepath)?,
         value,
     )?;
     Ok(())
 }
 
-fn deserialize_from_file<T>(filename: &str) -> Result<Option<T>, Box<dyn Error>>
+fn deserialize_from_file<T>(filepath: &str) -> Result<Option<T>, Box<dyn Error>>
 where
     T: DeserializeOwned,
 {
-    match OpenOptions::new().read(true).open(filename) {
+    match OpenOptions::new().read(true).open(filepath) {
         Ok(file) => Ok(Some(serde_json::de::from_reader(file)?)),
         Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(Box::new(e)),
@@ -408,34 +386,6 @@ fn revert_galnet_date(date: &str) -> String {
         date.to_owned()
     }
 }
-
-// fn list_downloaded_files() -> Result<Paths, Box<dyn Error>> {
-//     Ok(glob(&(EXTRACTED_FILES_LOCATION.clone() + "/*.json"))?)
-// }
-
-// fn list_downloaded_dates() -> Result<HashSet<GalnetDate>, Box<dyn Error>> {
-//     let extract_date = |filename: String| -> Option<GalnetDate> {
-//         if let Some(cap) = ARTICLE_DATE_MATCHER.captures(&filename) {
-//             Some(GalnetDate {
-//                 day: cap[1].to_string(),
-//                 month: cap[2].to_string(),
-//                 year: cap[3].to_string(),
-//             })
-//         } else {
-//             None
-//         }
-//     };
-
-//     let mut dates = HashSet::new();
-
-//     for entry in list_downloaded_files()? {
-//         if let Ok(path) = entry?.into_os_string().into_string() {
-//             extract_date(path).map(|date| dates.insert(date));
-//         }
-//     }
-
-//     Ok(dates)
-// }Vec
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
