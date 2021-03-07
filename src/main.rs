@@ -94,6 +94,22 @@ enum GalnetError {
 
 impl Error for GalnetError {}
 
+impl fmt::Display for GalnetError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            GalnetError::FileError { filename, cause } => {
+                write!(f, "Error while scraping from \"{}\": {}", filename, cause)
+            }
+            GalnetError::ParserError { cause } => {
+                write!(f, "Error while parsing: {}", cause)
+            }
+            GalnetError::ScraperError { url, cause } => {
+                write!(f, "Error while scraping from \"{}\": {}", url, cause)
+            }
+        }
+    }
+}
+
 #[derive(Default, Debug, Hash, Eq)]
 struct GalnetDate {
     day: String,
@@ -110,22 +126,6 @@ impl ToString for GalnetDate {
 impl PartialEq for GalnetDate {
     fn eq(&self, other: &Self) -> bool {
         self.to_string() == other.to_string()
-    }
-}
-
-impl fmt::Display for GalnetError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            GalnetError::FileError { filename, cause } => {
-                write!(f, "Error while scraping from \"{}\": {}", filename, cause)
-            }
-            GalnetError::ParserError { cause } => {
-                write!(f, "Error while parsing: {}", cause)
-            }
-            GalnetError::ScraperError { url, cause } => {
-                write!(f, "Error while scraping from \"{}\": {}", url, cause)
-            }
-        }
     }
 }
 
