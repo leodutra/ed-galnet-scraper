@@ -1,11 +1,12 @@
 #[macro_use]
 extern crate lazy_static;
 
+use chrono::naive::NaiveDateTime;
+use chrono::prelude::Utc;
 use fmt::Debug;
 use futures::future::join_all;
-
 use regex::Regex;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fs::{self, OpenOptions},
@@ -43,11 +44,9 @@ lazy_static! {
     // MATCHERS
     static ref ARTICLE_DATE_MATCHER: Regex =
         Regex::new(r"(\d{2})[\s-](\w{3})[\s-](\d{4,})").expect("Article date matcher");
-    // static ref FILENAME_UID_MATCHER: Regex =
-    //     Regex::new(r"[^-]+ - (\w+).json").expect("Filename UID matcher");
 }
 
-#[derive(Debug, Serialize, Eq)]
+#[derive(Debug, Serialize, Deserialize, Eq)]
 struct Article {
     uid: String,
     page_index: usize,
@@ -55,6 +54,7 @@ struct Article {
     date: String,
     url: String,
     content: String,
+    extraction_date: String,
 }
 
 impl Hash for Article {
@@ -66,6 +66,10 @@ impl Hash for Article {
 impl PartialEq for Article {
     fn eq(&self, other: &Self) -> bool {
         self.uid == other.uid
+            && self.title == other.title
+            && self.content == other.content
+            && self.url == other.url
+            && self.page_index == other.page_index
     }
 }
 
@@ -187,6 +191,10 @@ async fn extract_page(url: &str) -> PageExtraction {
     }
 }
 
+fn naive_date_time_to_json(date_time: &NaiveDateTime) -> String {
+    date_time.format("%Y-%m-%dT%H:%M:%SZ").to_string()
+}
+
 fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
     let parser_error = |cause: &str| {
         Err(GalnetError::ParserError {
@@ -253,6 +261,7 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
                 date,
                 url,
                 content,
+                extraction_date: naive_date_time_to_json(&Utc::now().naive_utc()),
             })
         })
         .collect()
@@ -275,8 +284,26 @@ async fn extract_page_to_file(url: &str) -> PageExtraction {
         )
     };
     let mut page_extraction = extract_page(url).await;
+
     for article in &page_extraction.articles {
         let filename = gen_article_filename(article);
+        if let Ok(content) = deserialize_from_file::<Article>(&filename) {
+            if let Some(extracted_article) = content {
+                if extracted_article.eq(article) {
+                    continue;
+                } else {
+                    let naive_curr_time: NaiveDateTime = Utc::now().naive_utc();
+                    let backup_filename =
+                        filename.clone() + " - " + &naive_date_time_to_json(&naive_curr_time);
+                    if let Err(cause) = serialize_to_file(&filename, &extracted_article) {
+                        page_extraction.errors.push(GalnetError::FileError {
+                            filename: backup_filename,
+                            cause,
+                        });
+                    }
+                }
+            }
+        }
         if let Err(cause) = serialize_to_file(&filename, article) {
             page_extraction
                 .errors
@@ -321,12 +348,11 @@ async fn extract_all(sequentially: bool) -> Result<(), Box<dyn Error>> {
     }
 
     page_extractions.iter_mut().for_each(|page_extraction| {
+        let url = page_extraction.url.clone();
         if page_extraction.errors.is_empty() {
-            let url = page_extraction.url.clone();
             failed_pages.remove(&url);
             downloaded_pages.insert(url);
         } else {
-            let url = page_extraction.url.clone();
             failed_pages.insert(
                 url.clone(),
                 ErroredPage {
@@ -346,6 +372,7 @@ async fn extract_all(sequentially: bool) -> Result<(), Box<dyn Error>> {
         let mut downloaded_pages = downloaded_pages.iter().collect::<Vec<_>>();
         downloaded_pages.sort();
         serialize_to_file(&DOWNLOADED_PAGES_FILE, &downloaded_pages)?;
+        println!("{} pages downloaded.", downloaded_pages.len());
     }
 
     // FAILED
@@ -353,6 +380,7 @@ async fn extract_all(sequentially: bool) -> Result<(), Box<dyn Error>> {
         let mut failed_pages = failed_pages.iter().collect::<Vec<_>>();
         failed_pages.sort_by_key(|k| k.0);
         serialize_to_file(&FAILED_PAGES_FILE, &failed_pages)?;
+        println!("{} pages ready.", failed_pages.len());
     }
 
     Ok(())
@@ -396,9 +424,4 @@ fn revert_galnet_date(date: &str) -> String {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     extract_all(true).await
-
-    // let resp = fetch_text("https://gist.githubusercontent.com/leodutra/6ce7397e0b8c20eb16f8949263e511c7/raw/galnet.html").await?;
-    // let links = extract_date_links(&resp);
-    // println!("{:#?}", links);
-    // println!("{:#?}", extract_date_articles(&resp));
 }
