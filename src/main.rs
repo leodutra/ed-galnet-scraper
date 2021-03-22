@@ -46,7 +46,7 @@ lazy_static! {
         Regex::new(r"(\d{2})[\s-](\w{3})[\s-](\d{4,})").expect("Article date matcher");
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq)]
+#[derive(Debug, Default, Serialize, Deserialize, Eq)]
 struct Article {
     uid: String,
     page_index: usize,
@@ -55,6 +55,7 @@ struct Article {
     url: String,
     content: String,
     extraction_date: String,
+    deprecated: bool,
 }
 
 impl Hash for Article {
@@ -195,6 +196,10 @@ fn naive_date_time_to_json(date_time: &NaiveDateTime) -> String {
     date_time.format("%Y-%m-%dT%H:%M:%SZ").to_string()
 }
 
+fn naive_date_time_to_filename(date_time: &NaiveDateTime) -> String {
+    date_time.format("%Y-%m-%dT%H-%M-%SZ").to_string()
+}
+
 fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
     let parser_error = |cause: &str| {
         Err(GalnetError::ParserError {
@@ -262,6 +267,7 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
                 url,
                 content,
                 extraction_date: naive_date_time_to_json(&Utc::now().naive_utc()),
+                deprecated: false,
             })
         })
         .collect()
@@ -286,16 +292,17 @@ async fn extract_page_to_file(url: &str) -> PageExtraction {
     let mut page_extraction = extract_page(url).await;
 
     for article in &page_extraction.articles {
-        let filename = gen_article_filename(article);
+        let filename = gen_article_filename(&article);
         if let Ok(content) = deserialize_from_file::<Article>(&filename) {
-            if let Some(extracted_article) = content {
-                if extracted_article.eq(article) {
+            if let Some(mut extracted_article) = content {
+                if extracted_article.eq(&article) {
                     continue;
                 } else {
                     let naive_curr_time: NaiveDateTime = Utc::now().naive_utc();
                     let backup_filename =
-                        filename.clone() + " - " + &naive_date_time_to_json(&naive_curr_time);
-                    if let Err(cause) = serialize_to_file(&filename, &extracted_article) {
+                        filename.clone() + " - " + &naive_date_time_to_filename(&naive_curr_time);
+                    extracted_article.deprecated = true;
+                    if let Err(cause) = serialize_to_file(&backup_filename, &extracted_article) {
                         page_extraction.errors.push(GalnetError::FileError {
                             filename: backup_filename,
                             cause,
@@ -372,7 +379,7 @@ async fn extract_all(sequentially: bool) -> Result<(), Box<dyn Error>> {
         let mut downloaded_pages = downloaded_pages.iter().collect::<Vec<_>>();
         downloaded_pages.sort();
         serialize_to_file(&DOWNLOADED_PAGES_FILE, &downloaded_pages)?;
-        println!("{} pages downloaded.", downloaded_pages.len());
+        println!("{} pages downloaded", downloaded_pages.len());
     }
 
     // FAILED
@@ -380,7 +387,7 @@ async fn extract_all(sequentially: bool) -> Result<(), Box<dyn Error>> {
         let mut failed_pages = failed_pages.iter().collect::<Vec<_>>();
         failed_pages.sort_by_key(|k| k.0);
         serialize_to_file(&FAILED_PAGES_FILE, &failed_pages)?;
-        println!("{} pages ready.", failed_pages.len());
+        println!("{} pages failed", failed_pages.len());
     }
 
     Ok(())
