@@ -192,14 +192,6 @@ async fn extract_page(url: &str) -> PageExtraction {
     }
 }
 
-fn naive_date_time_to_json(date_time: &NaiveDateTime) -> String {
-    date_time.format("%Y-%m-%dT%H:%M:%SZ").to_string()
-}
-
-fn naive_date_time_to_filename(date_time: &NaiveDateTime) -> String {
-    date_time.format("%Y-%m-%dT%H-%M-%SZ").to_string()
-}
-
 fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
     let parser_error = |cause: &str| {
         Err(GalnetError::ParserError {
@@ -266,7 +258,10 @@ fn extract_articles(html: &str) -> Vec<Result<Article, GalnetError>> {
                 date,
                 url,
                 content,
-                extraction_date: naive_date_time_to_json(&Utc::now().naive_utc()),
+                extraction_date: Utc::now()
+                    .naive_utc()
+                    .format("%Y-%m-%dT%H:%M:%SZ")
+                    .to_string(),
                 deprecated: false,
             })
         })
@@ -299,8 +294,9 @@ async fn extract_page_to_file(url: &str) -> PageExtraction {
                     continue;
                 } else {
                     let naive_curr_time: NaiveDateTime = Utc::now().naive_utc();
-                    let backup_filename =
-                        filename.clone() + " - " + &naive_date_time_to_filename(&naive_curr_time);
+                    let backup_filename = filename.clone()
+                        + " - "
+                        + &naive_curr_time.format("%Y-%m-%dT%H-%M-%SZ").to_string();
                     extracted_article.deprecated = true;
                     if let Err(cause) = serialize_to_file(&backup_filename, &extracted_article) {
                         page_extraction.errors.push(GalnetError::FileError {
