@@ -3,17 +3,17 @@ extern crate lazy_static;
 
 use chrono::naive::NaiveDateTime;
 use chrono::prelude::Utc;
-use fmt::Debug;
 use futures::future::join_all;
 use regex::Regex;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
+    error::Error,
+    fmt::{self, Debug, Display, Formatter},
     fs::{self, OpenOptions},
     hash::{Hash, Hasher},
+    vec,
 };
-use std::{collections::HashSet, error::Error};
-use std::{fmt, vec};
 
 use scraper::{ElementRef, Html, Selector};
 
@@ -99,8 +99,8 @@ enum GalnetError {
 
 impl Error for GalnetError {}
 
-impl fmt::Display for GalnetError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl Display for GalnetError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             GalnetError::FileError { filename, cause } => {
                 write!(f, "Error while scraping from \"{}\": {}", filename, cause)
