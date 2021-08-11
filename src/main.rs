@@ -49,11 +49,15 @@ lazy_static! {
 #[derive(Debug, Default, Serialize, Deserialize, Eq)]
 struct Article {
     uid: String,
+
+    #[serde(rename = "pageIndex")]
     page_index: usize,
     title: String,
     date: String,
     url: String,
     content: String,
+
+    #[serde(rename = "extractionDate")]
     extraction_date: String,
     deprecated: bool,
 }
