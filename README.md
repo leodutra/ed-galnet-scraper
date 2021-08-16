@@ -1,4 +1,4 @@
-# galnet-scraper
+# ed-galnet-scraper
 
 1. clone this repo
 2. `cargo run`

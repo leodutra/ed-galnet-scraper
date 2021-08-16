@@ -1,5 +1,5 @@
 [package]
-name = "galnet-scraper"
+name = "ed-galnet-scraper"
 version = "0.1.0"
 authors = ["Leo Dutra <leodutra.br@gmail.com>"]
 edition = "2018"
