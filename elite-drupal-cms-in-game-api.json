@@ -1,0 +1,1038 @@
+{
+  "jsonapi": {
+    "version": "1.0",
+    "meta": {
+      "links": { "self": { "href": "http://jsonapi.org/format/1.0/" } }
+    }
+  },
+  "data": [
+    {
+      "type": "node--galnet_article",
+      "id": "efb657f5-1290-40b1-89f9-ffd25fb49558",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/efb657f5-1290-40b1-89f9-ffd25fb49558?resourceVersion=id%3A9839"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1948,
+        "drupal_internal__vid": 9839,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-17T12:27:30+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Leaked Report Exposes Aegis Failures",
+        "created": "2021-08-17T12:27:30+00:00",
+        "changed": "2021-08-17T12:27:30+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-17T12:27:30+00:00",
+        "body": {
+          "value": "The Aegis board of inquiry\u2019s initial findings have been leaked to journalists, with several problems within the anti-xeno organisation detailed in the files.\r\nVox Galactica journalist Alexei Keel reported on its contents:\r\n\u201cThe independent inquiry into Aegis is in its early stages, making this disclosure of delicate information all the more embarrassing. Although only a summary, it highlights shortcomings that were immediately apparent to the investigators.\u201d\r\n\u201cThe leaked files outline a pattern of poor internal organisation and negligence. One claim is that Aegis accepted its heavy reliance on independent pilots entering combat situations against the Thargoids.\u201d \r\n\u201cA lack of technological breakthroughs since the first generation of AX weaponry is also criticised. Professor Tesreau, who has since resigned, is singled out for prioritising communication with the Thargoids rather than developing quickly deployed defences.\u201d\r\n\u201cInterview transcripts show that some Aegis personnel consider the inquiry itself to be part of a larger agenda. A recurring claim is that the superpowers directly contributed to Aegis\u2019s inefficiency by reducing funding, and are now scapegoating Aegis management for a lack of progress.\u201d\r\n\u201cDr Paul Baumann, chair of the board of inquiry, said that only the final report should be considered official. It is unclear when the \u2018Baumann Report\u2019, as some newsfeeds refer to it, might be ready for publication.\u201d",
+          "format": null,
+          "processed": "\u003Cp\u003EThe Aegis board of inquiry\u2019s initial findings have been leaked to journalists, with several problems within the anti-xeno organisation detailed in the files.\u003Cbr /\u003E\nVox Galactica journalist Alexei Keel reported on its contents:\u003Cbr /\u003E\n\u201cThe independent inquiry into Aegis is in its early stages, making this disclosure of delicate information all the more embarrassing. Although only a summary, it highlights shortcomings that were immediately apparent to the investigators.\u201d\u003Cbr /\u003E\n\u201cThe leaked files outline a pattern of poor internal organisation and negligence. One claim is that Aegis accepted its heavy reliance on independent pilots entering combat situations against the Thargoids.\u201d\u003Cbr /\u003E\n\u201cA lack of technological breakthroughs since the first generation of AX weaponry is also criticised. Professor Tesreau, who has since resigned, is singled out for prioritising communication with the Thargoids rather than developing quickly deployed defences.\u201d\u003Cbr /\u003E\n\u201cInterview transcripts show that some Aegis personnel consider the inquiry itself to be part of a larger agenda. A recurring claim is that the superpowers directly contributed to Aegis\u2019s inefficiency by reducing funding, and are now scapegoating Aegis management for a lack of progress.\u201d\u003Cbr /\u003E\n\u201cDr Paul Baumann, chair of the board of inquiry, said that only the final report should be considered official. It is unclear when the \u2018Baumann Report\u2019, as some newsfeeds refer to it, might be ready for publication.\u201d\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "17 AUG 3307",
+        "field_galnet_guid": "611ba6d5760fa3799e69814d",
+        "field_galnet_image": "NewsImageStation",
+        "field_slug": "leaked-report-exposes-aegis-failures"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/efb657f5-1290-40b1-89f9-ffd25fb49558/node_type?resourceVersion=id%3A9839"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/efb657f5-1290-40b1-89f9-ffd25fb49558/relationships/node_type?resourceVersion=id%3A9839"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/efb657f5-1290-40b1-89f9-ffd25fb49558/revision_uid?resourceVersion=id%3A9839"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/efb657f5-1290-40b1-89f9-ffd25fb49558/relationships/revision_uid?resourceVersion=id%3A9839"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/efb657f5-1290-40b1-89f9-ffd25fb49558/uid?resourceVersion=id%3A9839"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/efb657f5-1290-40b1-89f9-ffd25fb49558/relationships/uid?resourceVersion=id%3A9839"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "f230f0fc-1736-461b-8762-a2215b7a9a4e",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/f230f0fc-1736-461b-8762-a2215b7a9a4e?resourceVersion=id%3A9835"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1944,
+        "drupal_internal__vid": 9835,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-16T12:12:53+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Rival Corporations Compete in LTT 198 ",
+        "created": "2021-08-16T12:12:53+00:00",
+        "changed": "2021-08-16T12:12:53+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-16T12:12:53+00:00",
+        "body": {
+          "value": "Torval-Mastopolos Mining and Wreaken Construction have both established a presence in the LTT 198 system.\r\nMarlon Royce, business analyst for Vox Galactica, reviewed the situation:\r\n\u201cIt is highly unusual for two megacorps to set up new headquarters in the same place. But Mastopolos Mining and Wreaken Construction have always competed aggressively for mining and transportation contracts, so it seems a new chapter in their rivalry has begun.\u201d\r\n\u201cThis permit-locked system is controlled by the independent faction LTT 198 State Ltd. Insiders claim that it demanded a fortune from both corporations in return for granting passage to its ships and allowing construction of industrial complexes on the planet Dini.\u201d\r\n\u201cThis is the first significant move from Senator Zemina Torval\u2019s new company, an autonomous offshoot of Mastopolos Mining. It may be that Wreaken Construction\u2019s presence is an effort to crush their old enemy before she can acquire further corporate strength.\u201d\r\nThe Imperial Herald reported that Constantia Torval, one of Zemina Torval\u2019s daughters, has travelled from the Synteini system to LTT 198. It is believed Constantia has taken command of Torval-Mastopolos Mining\u2019s operations.",
+          "format": null,
+          "processed": "\u003Cp\u003ETorval-Mastopolos Mining and Wreaken Construction have both established a presence in the LTT 198 system.\u003Cbr /\u003E\nMarlon Royce, business analyst for Vox Galactica, reviewed the situation:\u003Cbr /\u003E\n\u201cIt is highly unusual for two megacorps to set up new headquarters in the same place. But Mastopolos Mining and Wreaken Construction have always competed aggressively for mining and transportation contracts, so it seems a new chapter in their rivalry has begun.\u201d\u003Cbr /\u003E\n\u201cThis permit-locked system is controlled by the independent faction LTT 198 State Ltd. Insiders claim that it demanded a fortune from both corporations in return for granting passage to its ships and allowing construction of industrial complexes on the planet Dini.\u201d\u003Cbr /\u003E\n\u201cThis is the first significant move from Senator Zemina Torval\u2019s new company, an autonomous offshoot of Mastopolos Mining. It may be that Wreaken Construction\u2019s presence is an effort to crush their old enemy before she can acquire further corporate strength.\u201d\u003Cbr /\u003E\nThe Imperial Herald reported that Constantia Torval, one of Zemina Torval\u2019s daughters, has travelled from the Synteini system to LTT 198. It is believed Constantia has taken command of Torval-Mastopolos Mining\u2019s operations.\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "16 AUG 3307",
+        "field_galnet_guid": "611a5253646cf42d196fadaf",
+        "field_galnet_image": "NewsImageAdderMining",
+        "field_slug": "rival-corporations-compete-ltt-198"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/f230f0fc-1736-461b-8762-a2215b7a9a4e/node_type?resourceVersion=id%3A9835"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/f230f0fc-1736-461b-8762-a2215b7a9a4e/relationships/node_type?resourceVersion=id%3A9835"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/f230f0fc-1736-461b-8762-a2215b7a9a4e/revision_uid?resourceVersion=id%3A9835"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/f230f0fc-1736-461b-8762-a2215b7a9a4e/relationships/revision_uid?resourceVersion=id%3A9835"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/f230f0fc-1736-461b-8762-a2215b7a9a4e/uid?resourceVersion=id%3A9835"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/f230f0fc-1736-461b-8762-a2215b7a9a4e/relationships/uid?resourceVersion=id%3A9835"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "99ae9ce3-e43b-45ad-8c21-6999acadf14f",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/99ae9ce3-e43b-45ad-8c21-6999acadf14f?resourceVersion=id%3A9812"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1943,
+        "drupal_internal__vid": 9812,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-13T12:12:29+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Onionhead Legality Sparks Debate",
+        "created": "2021-08-13T12:12:29+00:00",
+        "changed": "2021-08-13T12:12:29+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-13T12:12:29+00:00",
+        "body": {
+          "value": "The introduction of onionhead gamma strain by the Kumo Crew has reignited long-running arguments around the popular psychedelic drug.\r\nAn interview with Zander Lachance, spokesperson for the Coalition for Legalisation, was published by Vox Galactica:\r\n\u201cI have yet to see evidence that onionhead is more harmful than common recreational substances. Open-minded people in independent systems are now discovering this for themselves.\u201d\r\nIn response, other newsfeeds featured a range of opinions.\r\nEye on Achenar: \u201cFoppish rogues of the Federation such as Zachary Rackham and Sir Randolph Plaskett may feel comfortable wooing trade tycoons with the outlawed weed, but legalising low-cost onionhead would risk the whole Empire collapsing into a stupor!\u201d\r\nThe Pegasi Sentinel: \u201cThe popularity of \u2018helix\u2019 is steadily growing, and the revenue it generates will undoubtedly benefit those fortunate to live within Archon Delaine\u2019s dominion.\u201d\r\nSol Today: \u201cImperial hedonists such as Senator Leatrix and Duchess Rouncival may offer such illicit treats at their decadent parties, but bombarding the masses with this cheap narcotic will have the entire Federation chasing unicorns!\u201d\r\nThe Sovereign: \u201cTourists from many independent worlds are booking holidays to the Alici, Baraswar, Kishpakho, Nastrond and Nocori systems, where the gamma strain of onionhead is legal. There is no shortage of Alliance citizens following suit, which may pressure the Assembly to formally legislate one way or the other.\u201d",
+          "format": null,
+          "processed": "\u003Cp\u003EThe introduction of onionhead gamma strain by the Kumo Crew has reignited long-running arguments around the popular psychedelic drug.\u003Cbr /\u003E\nAn interview with Zander Lachance, spokesperson for the Coalition for Legalisation, was published by Vox Galactica:\u003Cbr /\u003E\n\u201cI have yet to see evidence that onionhead is more harmful than common recreational substances. Open-minded people in independent systems are now discovering this for themselves.\u201d\u003Cbr /\u003E\nIn response, other newsfeeds featured a range of opinions.\u003Cbr /\u003E\nEye on Achenar: \u201cFoppish rogues of the Federation such as Zachary Rackham and Sir Randolph Plaskett may feel comfortable wooing trade tycoons with the outlawed weed, but legalising low-cost onionhead would risk the whole Empire collapsing into a stupor!\u201d\u003Cbr /\u003E\nThe Pegasi Sentinel: \u201cThe popularity of \u2018helix\u2019 is steadily growing, and the revenue it generates will undoubtedly benefit those fortunate to live within Archon Delaine\u2019s dominion.\u201d\u003Cbr /\u003E\nSol Today: \u201cImperial hedonists such as Senator Leatrix and Duchess Rouncival may offer such illicit treats at their decadent parties, but bombarding the masses with this cheap narcotic will have the entire Federation chasing unicorns!\u201d\u003Cbr /\u003E\nThe Sovereign: \u201cTourists from many independent worlds are booking holidays to the Alici, Baraswar, Kishpakho, Nastrond and Nocori systems, where the gamma strain of onionhead is legal. There is no shortage of Alliance citizens following suit, which may pressure the Assembly to formally legislate one way or the other.\u201d\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "13 AUG 3307",
+        "field_galnet_guid": "61165edf97f3c87cee22b398",
+        "field_galnet_image": "NewsImageOnionHead",
+        "field_slug": "onionhead-legality-sparks-debate"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/99ae9ce3-e43b-45ad-8c21-6999acadf14f/node_type?resourceVersion=id%3A9812"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/99ae9ce3-e43b-45ad-8c21-6999acadf14f/relationships/node_type?resourceVersion=id%3A9812"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/99ae9ce3-e43b-45ad-8c21-6999acadf14f/revision_uid?resourceVersion=id%3A9812"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/99ae9ce3-e43b-45ad-8c21-6999acadf14f/relationships/revision_uid?resourceVersion=id%3A9812"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/99ae9ce3-e43b-45ad-8c21-6999acadf14f/uid?resourceVersion=id%3A9812"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/99ae9ce3-e43b-45ad-8c21-6999acadf14f/relationships/uid?resourceVersion=id%3A9812"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "0ac4e650-50be-4fe4-826e-b4cca6fe5f99",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/0ac4e650-50be-4fe4-826e-b4cca6fe5f99?resourceVersion=id%3A9664"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1938,
+        "drupal_internal__vid": 9664,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-12T14:06:18+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Marlinist Civil War Declared",
+        "created": "2021-08-12T14:06:18+00:00",
+        "changed": "2021-08-12T14:06:18+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-12T14:06:18+00:00",
+        "body": {
+          "value": "*Pilots Federation ALERT*\r\nConflict has erupted in the Hyades Sector RO-P b6-2 system between two factions of the Marlinist Colonies.\r\nThe Exiled Marlinist Assembly of Baltah\u0027Sine has declared war against the Marlinism Reformation Party, which acts as the political wing of the NMLA.\r\nPolitical relations degenerated into open combat following the NMLA\u2019s recent attacks, with Acting First Minister Amrita Ross\u2019s efforts to negotiate a peaceful resolution proving unsuccessful. \r\nA new megaship, Freedom\u2019s Voice, has entered service. It is acting as the operational base for the forces of the Exiled Marlinist Assembly of Baltah\u0027Sine. \r\nSupporters of the Marlinism Reformation Party are gathering at the Steel Majesty megaship. This was formerly used by the Neo-Marlinist Order of Mudhrid to flee from their home system.\r\nMinister Octavia Volkov announced in parliament: \r\n\u201cAaron Whyte and his collaborators are directly responsible for tens of thousands of deaths. I will not rest until they are defeated and brought to justice.\u201d\r\nMinister Aaron Whyte sent this response from his private vessel:\r\n\u201cVolkov\u2019s unlawful strike is a violation of our colonies\u2019 charter. We call upon all true Marlinists to defend us from this illegal act of aggression.\u201d\r\nThe Alliance, Empire and Federation have informed the Marlinist Consulate that they consider this conflict to be a strictly internal matter.\r\n",
+          "format": null,
+          "processed": "\u003Cp\u003E*Pilots Federation ALERT*\u003Cbr /\u003E\nConflict has erupted in the Hyades Sector RO-P b6-2 system between two factions of the Marlinist Colonies.\u003Cbr /\u003E\nThe Exiled Marlinist Assembly of Baltah\u0026#039;Sine has declared war against the Marlinism Reformation Party, which acts as the political wing of the NMLA.\u003Cbr /\u003E\nPolitical relations degenerated into open combat following the NMLA\u2019s recent attacks, with Acting First Minister Amrita Ross\u2019s efforts to negotiate a peaceful resolution proving unsuccessful.\u003Cbr /\u003E\nA new megaship, Freedom\u2019s Voice, has entered service. It is acting as the operational base for the forces of the Exiled Marlinist Assembly of Baltah\u0026#039;Sine.\u003Cbr /\u003E\nSupporters of the Marlinism Reformation Party are gathering at the Steel Majesty megaship. This was formerly used by the Neo-Marlinist Order of Mudhrid to flee from their home system.\u003Cbr /\u003E\nMinister Octavia Volkov announced in parliament:\u003Cbr /\u003E\n\u201cAaron Whyte and his collaborators are directly responsible for tens of thousands of deaths. I will not rest until they are defeated and brought to justice.\u201d\u003Cbr /\u003E\nMinister Aaron Whyte sent this response from his private vessel:\u003Cbr /\u003E\n\u201cVolkov\u2019s unlawful strike is a violation of our colonies\u2019 charter. We call upon all true Marlinists to defend us from this illegal act of aggression.\u201d\u003Cbr /\u003E\nThe Alliance, Empire and Federation have informed the Marlinist Consulate that they consider this conflict to be a strictly internal matter.\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "12 AUG 3307",
+        "field_galnet_guid": "6115283c4ae9245ab4489897",
+        "field_galnet_image": "NewsImageDiplomacyPressConference",
+        "field_slug": "marlinist-civil-war-declared"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/0ac4e650-50be-4fe4-826e-b4cca6fe5f99/node_type?resourceVersion=id%3A9664"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/0ac4e650-50be-4fe4-826e-b4cca6fe5f99/relationships/node_type?resourceVersion=id%3A9664"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/0ac4e650-50be-4fe4-826e-b4cca6fe5f99/revision_uid?resourceVersion=id%3A9664"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/0ac4e650-50be-4fe4-826e-b4cca6fe5f99/relationships/revision_uid?resourceVersion=id%3A9664"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/0ac4e650-50be-4fe4-826e-b4cca6fe5f99/uid?resourceVersion=id%3A9664"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/0ac4e650-50be-4fe4-826e-b4cca6fe5f99/relationships/uid?resourceVersion=id%3A9664"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "44d93743-57aa-478a-9a18-40b7e0accc41",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/44d93743-57aa-478a-9a18-40b7e0accc41?resourceVersion=id%3A9608"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1933,
+        "drupal_internal__vid": 9608,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-12T13:15:56+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Victory Against Federation for Independent Factions",
+        "created": "2021-08-12T13:15:56+00:00",
+        "changed": "2021-08-12T13:15:56+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-12T13:15:56+00:00",
+        "body": {
+          "value": "*Pilots Federation ALERT*\r\nNew Kuwembaa Labour has successfully seceded from the Federation and inspired other systems to declare independence.\r\nThe conflict in the Kuwembaa system ended with Federal loyalists Li Chotep for Equality being defeated. As a result, all systems controlled by New Kuwembaa Labour will remain independent.\r\nThis has inspired Selkana Labour, United HIP 108095 Values Party and Mutumu Future to also sever ties with the Federation, spreading the rebellion across a further 28 systems.\r\nThe victory was announced by Governor Sonal Mishra, the leader of New Kuwembaa Labour:\r\n\u201cWe owe a huge debt to all pilots who helped us secure our freedom. It is regrettable that we were forced to secede, but this should be a warning to President Hudson that he is taking the Federation down a dangerous path.\u201d\r\nThe rebelling systems have now shut down links with the Proactive Detection Bureau, which monitors all private and public communications. More Federal factions are now debating secession as the only way to guarantee their citizens\u2019 privacy rights.\r\nPilots who fought for New Kuwembaa Labour can now claim their rewards from Gagnan Port station. Li Chotep for Equality will reimburse Federal auxiliaries at the Fortress Liberty megaship.",
+          "format": null,
+          "processed": "\u003Cp\u003E*Pilots Federation ALERT*\u003Cbr /\u003E\nNew Kuwembaa Labour has successfully seceded from the Federation and inspired other systems to declare independence.\u003Cbr /\u003E\nThe conflict in the Kuwembaa system ended with Federal loyalists Li Chotep for Equality being defeated. As a result, all systems controlled by New Kuwembaa Labour will remain independent.\u003Cbr /\u003E\nThis has inspired Selkana Labour, United HIP 108095 Values Party and Mutumu Future to also sever ties with the Federation, spreading the rebellion across a further 28 systems.\u003Cbr /\u003E\nThe victory was announced by Governor Sonal Mishra, the leader of New Kuwembaa Labour:\u003Cbr /\u003E\n\u201cWe owe a huge debt to all pilots who helped us secure our freedom. It is regrettable that we were forced to secede, but this should be a warning to President Hudson that he is taking the Federation down a dangerous path.\u201d\u003Cbr /\u003E\nThe rebelling systems have now shut down links with the Proactive Detection Bureau, which monitors all private and public communications. More Federal factions are now debating secession as the only way to guarantee their citizens\u2019 privacy rights.\u003Cbr /\u003E\nPilots who fought for New Kuwembaa Labour can now claim their rewards from Gagnan Port station. Li Chotep for Equality will reimburse Federal auxiliaries at the Fortress Liberty megaship.\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "12 AUG 3307",
+        "field_galnet_guid": "61151cab43500b703a6d3edd",
+        "field_galnet_image": "NewsImageRebellionFederation",
+        "field_slug": "victory-against-federation-independent-factions"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/44d93743-57aa-478a-9a18-40b7e0accc41/node_type?resourceVersion=id%3A9608"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/44d93743-57aa-478a-9a18-40b7e0accc41/relationships/node_type?resourceVersion=id%3A9608"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/44d93743-57aa-478a-9a18-40b7e0accc41/revision_uid?resourceVersion=id%3A9608"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/44d93743-57aa-478a-9a18-40b7e0accc41/relationships/revision_uid?resourceVersion=id%3A9608"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/44d93743-57aa-478a-9a18-40b7e0accc41/uid?resourceVersion=id%3A9608"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/44d93743-57aa-478a-9a18-40b7e0accc41/relationships/uid?resourceVersion=id%3A9608"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "824a7050-cb26-4b6c-aae9-87c153f28563",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/824a7050-cb26-4b6c-aae9-87c153f28563?resourceVersion=id%3A9536"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1931,
+        "drupal_internal__vid": 9536,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-11T12:30:57+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Aegis Probed by Board of Inquiry",
+        "created": "2021-08-11T12:30:57+00:00",
+        "changed": "2021-08-11T12:30:57+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-11T12:30:57+00:00",
+        "body": {
+          "value": "An investigation into the tri-superpower organisation Aegis is seeking to establish the reasons for its failures.\r\nDr Paul Baumann, chair of the independent board of inquiry, outlined its scope:\r\n\u201cThe initial phase is to fully understand the work of Aegis, before examining strategic and operational decisions. Interviews with senior staff have been scheduled, with Admiral Aden Tanner providing details on military activity.\u201d\r\n\u201cOne specific area of attention is the lost megaship Alexandria. We are performing a thorough analysis, including background checks on its crew. Hyperspace physicists are theorising probable causes for its failure to arrive at HIP 30944.\u201d\r\n\u201cWe will be raising issues of culpability, specifically whether the concentration of Guardian artefacts aboard the Alexandria directly led to systems coming under Thargoid attack. Other incidents will be reviewed to identify possible grounds for negligence.\u201d\r\nMany prominent figures within Aegis have resigned including Professor Alba Tesreau, Director Yazhu Xing and Dr Mia Valencourt. All active projects have been suspended, with routine activities continuing under independent observation.\r\nSome politicians in all three superpowers have protested against the inquiry, concerned about weakening defences against the Thargoids. Others believe Aegis is not fit for purpose, calling for a more localised approach to anti-xeno operations.",
+          "format": null,
+          "processed": "\u003Cp\u003EAn investigation into the tri-superpower organisation Aegis is seeking to establish the reasons for its failures.\u003Cbr /\u003E\nDr Paul Baumann, chair of the independent board of inquiry, outlined its scope:\u003Cbr /\u003E\n\u201cThe initial phase is to fully understand the work of Aegis, before examining strategic and operational decisions. Interviews with senior staff have been scheduled, with Admiral Aden Tanner providing details on military activity.\u201d\u003Cbr /\u003E\n\u201cOne specific area of attention is the lost megaship Alexandria. We are performing a thorough analysis, including background checks on its crew. Hyperspace physicists are theorising probable causes for its failure to arrive at HIP 30944.\u201d\u003Cbr /\u003E\n\u201cWe will be raising issues of culpability, specifically whether the concentration of Guardian artefacts aboard the Alexandria directly led to systems coming under Thargoid attack. Other incidents will be reviewed to identify possible grounds for negligence.\u201d\u003Cbr /\u003E\nMany prominent figures within Aegis have resigned including Professor Alba Tesreau, Director Yazhu Xing and Dr Mia Valencourt. All active projects have been suspended, with routine activities continuing under independent observation.\u003Cbr /\u003E\nSome politicians in all three superpowers have protested against the inquiry, concerned about weakening defences against the Thargoids. Others believe Aegis is not fit for purpose, calling for a more localised approach to anti-xeno operations.\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "11 AUG 3307",
+        "field_galnet_guid": "6113bc98317a0c774b712154",
+        "field_galnet_image": "NewsImageFederalCityscape",
+        "field_slug": "aegis-probed-board-inquiry"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/824a7050-cb26-4b6c-aae9-87c153f28563/node_type?resourceVersion=id%3A9536"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/824a7050-cb26-4b6c-aae9-87c153f28563/relationships/node_type?resourceVersion=id%3A9536"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/824a7050-cb26-4b6c-aae9-87c153f28563/revision_uid?resourceVersion=id%3A9536"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/824a7050-cb26-4b6c-aae9-87c153f28563/relationships/revision_uid?resourceVersion=id%3A9536"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/824a7050-cb26-4b6c-aae9-87c153f28563/uid?resourceVersion=id%3A9536"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/824a7050-cb26-4b6c-aae9-87c153f28563/relationships/uid?resourceVersion=id%3A9536"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "467dc9f9-1c97-44aa-8bce-44e278f7fd98",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/467dc9f9-1c97-44aa-8bce-44e278f7fd98?resourceVersion=id%3A9488"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1930,
+        "drupal_internal__vid": 9488,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-10T12:21:17+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Zemina Torval Creates New Corporation",
+        "created": "2021-08-10T12:21:17+00:00",
+        "changed": "2021-08-10T12:21:17+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-10T12:21:17+00:00",
+        "body": {
+          "value": "A new independent branch of Mastopolos Mining has been established by its controlling shareholder, Senator Zemina Torval.\r\nThe megacorp is owned by the powerful Mastopolos family, and operates throughout the Empire and beyond. However, Torval\u2019s position as a majority shareholder has allowed her to exert a strong influence on its activities.\r\nSenator Torval confirmed her plans in a statement to The Imperial Herald:\r\n\u201cDiversification is an effective strategy in the current business climate. Torval-Mastopolos Mining will have corporate autonomy, while offering the same mining and transportation services to an emergent client base.\u201d\r\nMarlon Royce, business analyst for Vox Galactica, reported:\r\n\u201cThe persistent rumours of a rift between Zemina Torval and her cousin, CEO Gabriella Mastopolos, may now be validated. Insiders report that after decades of working behind the scenes, Torval wishes to provide a more tangible legacy for her own children. Already she has set her sights on a permit-controlled system as the headquarters for this new company.\u201d\r\nAs well as being renowned for her private wealth and corporate enterprises, Zemina Torval has been a prominent member of the Imperial Senate for decades. She has occasionally deputised as chancellor, and is known to be an outspoken champion of the Empire\u2019s traditions.",
+          "format": null,
+          "processed": "\u003Cp\u003EA new independent branch of Mastopolos Mining has been established by its controlling shareholder, Senator Zemina Torval.\u003Cbr /\u003E\nThe megacorp is owned by the powerful Mastopolos family, and operates throughout the Empire and beyond. However, Torval\u2019s position as a majority shareholder has allowed her to exert a strong influence on its activities.\u003Cbr /\u003E\nSenator Torval confirmed her plans in a statement to The Imperial Herald:\u003Cbr /\u003E\n\u201cDiversification is an effective strategy in the current business climate. Torval-Mastopolos Mining will have corporate autonomy, while offering the same mining and transportation services to an emergent client base.\u201d\u003Cbr /\u003E\nMarlon Royce, business analyst for Vox Galactica, reported:\u003Cbr /\u003E\n\u201cThe persistent rumours of a rift between Zemina Torval and her cousin, CEO Gabriella Mastopolos, may now be validated. Insiders report that after decades of working behind the scenes, Torval wishes to provide a more tangible legacy for her own children. Already she has set her sights on a permit-controlled system as the headquarters for this new company.\u201d\u003Cbr /\u003E\nAs well as being renowned for her private wealth and corporate enterprises, Zemina Torval has been a prominent member of the Imperial Senate for decades. She has occasionally deputised as chancellor, and is known to be an outspoken champion of the Empire\u2019s traditions.\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "10 AUG 3307",
+        "field_galnet_guid": "61126c08ce96504d5325e317",
+        "field_galnet_image": "NewsImageGoldRushMining,EmpireIconNewsImage",
+        "field_slug": "zemina-torval-creates-new-corporation"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/467dc9f9-1c97-44aa-8bce-44e278f7fd98/node_type?resourceVersion=id%3A9488"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/467dc9f9-1c97-44aa-8bce-44e278f7fd98/relationships/node_type?resourceVersion=id%3A9488"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/467dc9f9-1c97-44aa-8bce-44e278f7fd98/revision_uid?resourceVersion=id%3A9488"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/467dc9f9-1c97-44aa-8bce-44e278f7fd98/relationships/revision_uid?resourceVersion=id%3A9488"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/467dc9f9-1c97-44aa-8bce-44e278f7fd98/uid?resourceVersion=id%3A9488"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/467dc9f9-1c97-44aa-8bce-44e278f7fd98/relationships/uid?resourceVersion=id%3A9488"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "7aaaa4cd-d189-41aa-bf52-b5f72985d049",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/7aaaa4cd-d189-41aa-bf52-b5f72985d049?resourceVersion=id%3A9482"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1926,
+        "drupal_internal__vid": 9482,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-09T12:27:57+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Tensions Inflamed in Marlinist Colonies",
+        "created": "2021-08-09T12:27:57+00:00",
+        "changed": "2021-08-09T12:27:57+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-09T12:27:57+00:00",
+        "body": {
+          "value": "The bombing of two Marlinist starports by the NMLA has caused political rifts and public protests across the colony systems.\r\nLocal newsfeed The Marlin Standard reported on current events:\r\n\u201cOur entire society is still reeling in shock after last week\u2019s attacks against Stillman Hub and Tilman Point stations. There has been mass panic in fear of further terrorist strikes, with unprecedented scenes of violence against known Neo-Marlinist supporters.\u201d\r\n\u201cWithout the respected leadership of First Minister Jenna Fairfax, angry exchanges and recriminations have divided the Marlinist Parliament. Minister Aaron Whyte claimed that \u2018we invited this tragedy upon ourselves\u2019 by not voting for a Neo-Marlinist prime consul. In response, Minister Octavia Volkov called for Whyte\u2019s arrest as \u2018an accessory to mass murder\u2019.\u201d\r\n\u201cSome community leaders expressed sorrow at a lost opportunity to establish a Marlinist presence in the Imperial Senate. This is certainly the view of Acting First Minister Amrita Ross, who believes in rejoining the Empire.\u201d\r\n\u201cAll of which has led to a baptism of fire for Prime Consul Kayode Tau, whose focus has been on arranging medical aid from the Alliance and Federation. It may be that the Marlinist Consulate will soon be called upon to mediate between its own people.\u201d",
+          "format": null,
+          "processed": "\u003Cp\u003EThe bombing of two Marlinist starports by the NMLA has caused political rifts and public protests across the colony systems.\u003Cbr /\u003E\nLocal newsfeed The Marlin Standard reported on current events:\u003Cbr /\u003E\n\u201cOur entire society is still reeling in shock after last week\u2019s attacks against Stillman Hub and Tilman Point stations. There has been mass panic in fear of further terrorist strikes, with unprecedented scenes of violence against known Neo-Marlinist supporters.\u201d\u003Cbr /\u003E\n\u201cWithout the respected leadership of First Minister Jenna Fairfax, angry exchanges and recriminations have divided the Marlinist Parliament. Minister Aaron Whyte claimed that \u2018we invited this tragedy upon ourselves\u2019 by not voting for a Neo-Marlinist prime consul. In response, Minister Octavia Volkov called for Whyte\u2019s arrest as \u2018an accessory to mass murder\u2019.\u201d\u003Cbr /\u003E\n\u201cSome community leaders expressed sorrow at a lost opportunity to establish a Marlinist presence in the Imperial Senate. This is certainly the view of Acting First Minister Amrita Ross, who believes in rejoining the Empire.\u201d\u003Cbr /\u003E\n\u201cAll of which has led to a baptism of fire for Prime Consul Kayode Tau, whose focus has been on arranging medical aid from the Alliance and Federation. It may be that the Marlinist Consulate will soon be called upon to mediate between its own people.\u201d\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "09 AUG 3307",
+        "field_galnet_guid": "611118de443b5e7e717e2882",
+        "field_galnet_image": "NewsImageDiplomacyPressConference",
+        "field_slug": "tensions-inflamed-marlinist-colonies"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/7aaaa4cd-d189-41aa-bf52-b5f72985d049/node_type?resourceVersion=id%3A9482"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/7aaaa4cd-d189-41aa-bf52-b5f72985d049/relationships/node_type?resourceVersion=id%3A9482"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/7aaaa4cd-d189-41aa-bf52-b5f72985d049/revision_uid?resourceVersion=id%3A9482"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/7aaaa4cd-d189-41aa-bf52-b5f72985d049/relationships/revision_uid?resourceVersion=id%3A9482"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/7aaaa4cd-d189-41aa-bf52-b5f72985d049/uid?resourceVersion=id%3A9482"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/7aaaa4cd-d189-41aa-bf52-b5f72985d049/relationships/uid?resourceVersion=id%3A9482"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "ad947c6a-3013-4642-b937-a242ca41e396",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/ad947c6a-3013-4642-b937-a242ca41e396?resourceVersion=id%3A9411"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1925,
+        "drupal_internal__vid": 9411,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-06T12:15:56+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Thargoid Cultists Prepare for Religious Voyages",
+        "created": "2021-08-06T12:15:56+00:00",
+        "changed": "2021-08-06T12:15:56+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-06T12:15:56+00:00",
+        "body": {
+          "value": "Three megaships are being populated by the Far God cult, part of their latest effort to recruit members and find their alien deity.\r\nThe first vessel, the Testament, will serve as a missionary ship and journey throughout the core systems, attempting to convert new followers to the Thargoid-worshipping sect.\r\nWhile the mystical cult is typically secretive in nature, Vox Galactica obtained a quote from a member named the Second Witness of the Seventieth Chapter:\r\n\u201cThe masses are deaf to the voice of the Far God. What you see as alien monsters, we view as messengers from a very real multi-dimensional being. The Testament will help us carry the word of Its imminent arrival.\u201d\r\nTwo other megaships have been outfitted for long-range journeys. The Perdition and the Sacrosanct will carry many thousands of cultists on what they view as a pilgrimage to the Far God.\r\nDr Alfred Ulyanov, a leading exotheologian and expert on the religion, commented:\r\n\u201cThis fringe creed, which has survived endless abuse and attacks, has now reached a surprising level of organisation. Most of us associate the Thargoids with death and destruction, making it all the more remarkable that these people see only divinity.\u201d",
+          "format": null,
+          "processed": "\u003Cp\u003EThree megaships are being populated by the Far God cult, part of their latest effort to recruit members and find their alien deity.\u003Cbr /\u003E\nThe first vessel, the Testament, will serve as a missionary ship and journey throughout the core systems, attempting to convert new followers to the Thargoid-worshipping sect.\u003Cbr /\u003E\nWhile the mystical cult is typically secretive in nature, Vox Galactica obtained a quote from a member named the Second Witness of the Seventieth Chapter:\u003Cbr /\u003E\n\u201cThe masses are deaf to the voice of the Far God. What you see as alien monsters, we view as messengers from a very real multi-dimensional being. The Testament will help us carry the word of Its imminent arrival.\u201d\u003Cbr /\u003E\nTwo other megaships have been outfitted for long-range journeys. The Perdition and the Sacrosanct will carry many thousands of cultists on what they view as a pilgrimage to the Far God.\u003Cbr /\u003E\nDr Alfred Ulyanov, a leading exotheologian and expert on the religion, commented:\u003Cbr /\u003E\n\u201cThis fringe creed, which has survived endless abuse and attacks, has now reached a surprising level of organisation. Most of us associate the Thargoids with death and destruction, making it all the more remarkable that these people see only divinity.\u201d\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "06 AUG 3307",
+        "field_galnet_guid": "610d242dfdc64465f07c4f85",
+        "field_galnet_image": "NewsImageExpansionExploration",
+        "field_slug": "thargoid-cultists-prepare-religious-voyages"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/ad947c6a-3013-4642-b937-a242ca41e396/node_type?resourceVersion=id%3A9411"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/ad947c6a-3013-4642-b937-a242ca41e396/relationships/node_type?resourceVersion=id%3A9411"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/ad947c6a-3013-4642-b937-a242ca41e396/revision_uid?resourceVersion=id%3A9411"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/ad947c6a-3013-4642-b937-a242ca41e396/relationships/revision_uid?resourceVersion=id%3A9411"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/ad947c6a-3013-4642-b937-a242ca41e396/uid?resourceVersion=id%3A9411"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/ad947c6a-3013-4642-b937-a242ca41e396/relationships/uid?resourceVersion=id%3A9411"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "32d46b2d-1558-4548-87d7-5064b8ffcc5c",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/32d46b2d-1558-4548-87d7-5064b8ffcc5c?resourceVersion=id%3A9391"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1922,
+        "drupal_internal__vid": 9391,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-05T13:21:14+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Federal Forces Combat New Rebellion",
+        "created": "2021-08-05T13:21:14+00:00",
+        "changed": "2021-08-05T13:21:14+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-05T13:21:14+00:00",
+        "body": {
+          "value": "*Pilots Federation ALERT*\r\nIn the Kuwembaa system, the Federation is fighting to prevent further factions from declaring independence.\r\nNew Kuwembaa Labour has broken ties with the Federation in protest against the government\u2019s civil surveillance programme.\r\nLi Chotep for Equality, a local Federal faction, has been tasked to degrade the rebelling faction\u2019s military strength. President Zachary Hudson made a brief public announcement:\r\n\u201cI call upon all Federal auxiliaries to aid in this conflict. The reputation of the Federation cannot be so easily tarnished by such criminal action.\u201d\r\nGovernor Sonal Mishra, the leader of New Kuwembaa Labour, also requested assistance:\r\n\u201cThe Federal Accord is no longer fit for purpose. We require support to make a stand against this violation of our constitutional rights.\u201d\r\nThree other Federal factions are about to declare themselves as independent sovereign states: Selkana Labour, United HIP 108095 Values Party and Mutumu Future. These control a combined total of 28 systems.\r\nHowever, two recently seceded factions \u2013 the Coalition of Uteran and Gluscap Labour \u2013 are considering rejoining the Federation, depending on the result of the Kuwembaa conflict.\r\nPro-independence pilots can support New Kuwembaa Labour by delivering combat bonds to Gagnan Port station. Federal auxiliaries can fight on behalf of Li Chotep for Equality by handing in combat bonds at the Fortress Liberty megaship.\r\n",
+          "format": null,
+          "processed": "\u003Cp\u003E*Pilots Federation ALERT*\u003Cbr /\u003E\nIn the Kuwembaa system, the Federation is fighting to prevent further factions from declaring independence.\u003Cbr /\u003E\nNew Kuwembaa Labour has broken ties with the Federation in protest against the government\u2019s civil surveillance programme.\u003Cbr /\u003E\nLi Chotep for Equality, a local Federal faction, has been tasked to degrade the rebelling faction\u2019s military strength. President Zachary Hudson made a brief public announcement:\u003Cbr /\u003E\n\u201cI call upon all Federal auxiliaries to aid in this conflict. The reputation of the Federation cannot be so easily tarnished by such criminal action.\u201d\u003Cbr /\u003E\nGovernor Sonal Mishra, the leader of New Kuwembaa Labour, also requested assistance:\u003Cbr /\u003E\n\u201cThe Federal Accord is no longer fit for purpose. We require support to make a stand against this violation of our constitutional rights.\u201d\u003Cbr /\u003E\nThree other Federal factions are about to declare themselves as independent sovereign states: Selkana Labour, United HIP 108095 Values Party and Mutumu Future. These control a combined total of 28 systems.\u003Cbr /\u003E\nHowever, two recently seceded factions \u2013 the Coalition of Uteran and Gluscap Labour \u2013 are considering rejoining the Federation, depending on the result of the Kuwembaa conflict.\u003Cbr /\u003E\nPro-independence pilots can support New Kuwembaa Labour by delivering combat bonds to Gagnan Port station. Federal auxiliaries can fight on behalf of Li Chotep for Equality by handing in combat bonds at the Fortress Liberty megaship.\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "05 AUG 3307",
+        "field_galnet_guid": "610be2390e80ab3bc4372348",
+        "field_galnet_image": "NewsImageRebellionFederation",
+        "field_slug": "federal-forces-combat-new-rebellion"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/32d46b2d-1558-4548-87d7-5064b8ffcc5c/node_type?resourceVersion=id%3A9391"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/32d46b2d-1558-4548-87d7-5064b8ffcc5c/relationships/node_type?resourceVersion=id%3A9391"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/32d46b2d-1558-4548-87d7-5064b8ffcc5c/revision_uid?resourceVersion=id%3A9391"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/32d46b2d-1558-4548-87d7-5064b8ffcc5c/relationships/revision_uid?resourceVersion=id%3A9391"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/32d46b2d-1558-4548-87d7-5064b8ffcc5c/uid?resourceVersion=id%3A9391"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/32d46b2d-1558-4548-87d7-5064b8ffcc5c/relationships/uid?resourceVersion=id%3A9391"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "b2efb640-a9aa-4b91-af82-244339515ea7",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b2efb640-a9aa-4b91-af82-244339515ea7?resourceVersion=id%3A9264"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1914,
+        "drupal_internal__vid": 9264,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-03T13:43:03+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Superpowers Respond to New Onionhead",
+        "created": "2021-08-03T13:43:03+00:00",
+        "changed": "2021-08-03T13:43:03+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-03T13:43:03+00:00",
+        "body": {
+          "value": "The Alliance, Empire and Federation have clarified their official positions regarding the emergence of onionhead gamma strain.\r\nAll variants of the popular psychedelic drug remain illegal within Federal space. Ambassador Jasmina Halsey, who was president in 3300 when the ruling was made, announced:\r\n\u201cI am pleased that my decision to outlaw onionhead stands. I still maintain that it leads to experimentation with more dangerous narcotics, and we must steer our youth away from that path.\u201d\r\nThe Empire has also declared onionhead illegal, despite rumours that it is imported by the wealthiest citizens for private use. Princess Aisling Duval told the media:\r\n\u201cIt was insulting enough that Delaine was allowed into the Galactic Summit, but now he\u2019s peddling filthy drugs and pretending it\u2019s medicine! I only pray that nobody loses a loved one to such poison, as I have.\u201d\r\nThe Alliance has not made a broad ruling regarding onionhead, which is illegal in the majority of member systems but available in those classified as having anarchy governments. However, Deputy Prime Minister Angela Corcoran addressed the issue:\r\n\u201cAs with most trade, we defer to the legislation of local authorities. But we are in contact with the IHO and are keeping a close eye on the situation.\u201d\r\nOnionhead gamma strain remains on sale in selected systems governed by industrial anarchy factions.",
+          "format": null,
+          "processed": "\u003Cp\u003EThe Alliance, Empire and Federation have clarified their official positions regarding the emergence of onionhead gamma strain.\u003Cbr /\u003E\nAll variants of the popular psychedelic drug remain illegal within Federal space. Ambassador Jasmina Halsey, who was president in 3300 when the ruling was made, announced:\u003Cbr /\u003E\n\u201cI am pleased that my decision to outlaw onionhead stands. I still maintain that it leads to experimentation with more dangerous narcotics, and we must steer our youth away from that path.\u201d\u003Cbr /\u003E\nThe Empire has also declared onionhead illegal, despite rumours that it is imported by the wealthiest citizens for private use. Princess Aisling Duval told the media:\u003Cbr /\u003E\n\u201cIt was insulting enough that Delaine was allowed into the Galactic Summit, but now he\u2019s peddling filthy drugs and pretending it\u2019s medicine! I only pray that nobody loses a loved one to such poison, as I have.\u201d\u003Cbr /\u003E\nThe Alliance has not made a broad ruling regarding onionhead, which is illegal in the majority of member systems but available in those classified as having anarchy governments. However, Deputy Prime Minister Angela Corcoran addressed the issue:\u003Cbr /\u003E\n\u201cAs with most trade, we defer to the legislation of local authorities. But we are in contact with the IHO and are keeping a close eye on the situation.\u201d\u003Cbr /\u003E\nOnionhead gamma strain remains on sale in selected systems governed by industrial anarchy factions.\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "03 AUG 3307",
+        "field_galnet_guid": "610944441d6dc65db72d5f75",
+        "field_galnet_image": "NewsImageOnionHead",
+        "field_slug": "superpowers-respond-new-onionhead"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b2efb640-a9aa-4b91-af82-244339515ea7/node_type?resourceVersion=id%3A9264"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b2efb640-a9aa-4b91-af82-244339515ea7/relationships/node_type?resourceVersion=id%3A9264"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b2efb640-a9aa-4b91-af82-244339515ea7/revision_uid?resourceVersion=id%3A9264"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b2efb640-a9aa-4b91-af82-244339515ea7/relationships/revision_uid?resourceVersion=id%3A9264"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b2efb640-a9aa-4b91-af82-244339515ea7/uid?resourceVersion=id%3A9264"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b2efb640-a9aa-4b91-af82-244339515ea7/relationships/uid?resourceVersion=id%3A9264"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "node--galnet_article",
+      "id": "b119fd7d-7deb-4511-8dea-177210de7dc8",
+      "links": {
+        "self": {
+          "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b119fd7d-7deb-4511-8dea-177210de7dc8?resourceVersion=id%3A9247"
+        }
+      },
+      "attributes": {
+        "drupal_internal__nid": 1905,
+        "drupal_internal__vid": 9247,
+        "langcode": "en",
+        "revision_timestamp": "2021-08-02T11:15:56+00:00",
+        "revision_log": null,
+        "status": true,
+        "title": "Marlinists in Crisis After Starport Bombings",
+        "created": "2021-08-02T11:15:56+00:00",
+        "changed": "2021-08-02T11:15:56+00:00",
+        "promote": true,
+        "sticky": false,
+        "default_langcode": true,
+        "revision_translation_affected": true,
+        "moderation_state": null,
+        "path": { "alias": null, "pid": null, "langcode": "en" },
+        "publish_on": null,
+        "unpublish_on": null,
+        "content_translation_source": "und",
+        "content_translation_outdated": false,
+        "published_at": "2021-08-02T11:15:56+00:00",
+        "body": {
+          "value": "The NMLA\u2019s attacks against the Marlinist Colonies have caused mass casualties, disruption and political chaos.\r\nMore than 35,000 civilians were killed in the attacks, with twice as many suffering injuries and caustic burns. Safeguard Interstellar is providing vital supplies to survivors, and evacuations of Stillman Hub and Tilman Point stations are ongoing.\r\nFirst Minister Jenna Fairfax has been confirmed dead. Minister Amrita Ross has temporarily assumed leadership, but the Marlinist Parliament has been destabilised by heated accusations between its members.\r\nThe Marlinist Constabulary has tightened security, and ACT is running urgent investigations. Captain Milo Castile told the media:\r\n\u201cThis was undoubtedly the work of Theta Group, the NMLA\u2019s weapons specialists. We have found evidence that local Neo-Marlinist supporters provided logistical support, and arrests are forthcoming. However, as always the terrorists covered their tracks remarkably well.\u201d\r\nAlliance and Federation leaders have sent messages of condolence and offers of medical aid. Prime Consul Kayode Tau is liaising with both superpowers to coordinate relief efforts.\r\nIn the Empire, from which the Marlinists fled as refugees in 3306, there are mixed reactions. Some wish to extend protection to former Imperial citizens, while others see it as poetic justice for their republican beliefs \u2018creating\u2019 the NMLA.",
+          "format": null,
+          "processed": "\u003Cp\u003EThe NMLA\u2019s attacks against the Marlinist Colonies have caused mass casualties, disruption and political chaos.\u003Cbr /\u003E\nMore than 35,000 civilians were killed in the attacks, with twice as many suffering injuries and caustic burns. Safeguard Interstellar is providing vital supplies to survivors, and evacuations of Stillman Hub and Tilman Point stations are ongoing.\u003Cbr /\u003E\nFirst Minister Jenna Fairfax has been confirmed dead. Minister Amrita Ross has temporarily assumed leadership, but the Marlinist Parliament has been destabilised by heated accusations between its members.\u003Cbr /\u003E\nThe Marlinist Constabulary has tightened security, and ACT is running urgent investigations. Captain Milo Castile told the media:\u003Cbr /\u003E\n\u201cThis was undoubtedly the work of Theta Group, the NMLA\u2019s weapons specialists. We have found evidence that local Neo-Marlinist supporters provided logistical support, and arrests are forthcoming. However, as always the terrorists covered their tracks remarkably well.\u201d\u003Cbr /\u003E\nAlliance and Federation leaders have sent messages of condolence and offers of medical aid. Prime Consul Kayode Tau is liaising with both superpowers to coordinate relief efforts.\u003Cbr /\u003E\nIn the Empire, from which the Marlinists fled as refugees in 3306, there are mixed reactions. Some wish to extend protection to former Imperial citizens, while others see it as poetic justice for their republican beliefs \u2018creating\u2019 the NMLA.\u003C/p\u003E\n",
+          "summary": null
+        },
+        "field_galnet_date": "02 AUG 3307",
+        "field_galnet_guid": "6107d0fc8139c43f2d790b0b",
+        "field_galnet_image": "NewsImageDeathGeneric",
+        "field_slug": "marlinists-crisis-after-starport-bombings"
+      },
+      "relationships": {
+        "node_type": {
+          "data": {
+            "type": "node_type--node_type",
+            "id": "d5423a5a-e814-4cef-b7a1-a7b063e4ac16"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b119fd7d-7deb-4511-8dea-177210de7dc8/node_type?resourceVersion=id%3A9247"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b119fd7d-7deb-4511-8dea-177210de7dc8/relationships/node_type?resourceVersion=id%3A9247"
+            }
+          }
+        },
+        "revision_uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b119fd7d-7deb-4511-8dea-177210de7dc8/revision_uid?resourceVersion=id%3A9247"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b119fd7d-7deb-4511-8dea-177210de7dc8/relationships/revision_uid?resourceVersion=id%3A9247"
+            }
+          }
+        },
+        "uid": {
+          "data": {
+            "type": "user--user",
+            "id": "50ecfed3-304f-464f-b7fd-4ba7ce1547cd"
+          },
+          "links": {
+            "related": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b119fd7d-7deb-4511-8dea-177210de7dc8/uid?resourceVersion=id%3A9247"
+            },
+            "self": {
+              "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article/b119fd7d-7deb-4511-8dea-177210de7dc8/relationships/uid?resourceVersion=id%3A9247"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "links": {
+    "next": {
+      "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article?sort=-published_at\u0026page%5Boffset%5D=12\u0026page%5Blimit%5D=12"
+    },
+    "self": {
+      "href": "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article?page%5Blimit%5D=12\u0026page%5Boffset%5D=0\u0026sort=-published_at"
+    }
+  }
+}
