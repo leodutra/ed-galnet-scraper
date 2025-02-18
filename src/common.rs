@@ -48,25 +48,6 @@ impl PartialEq for Article {
     }
 }
 
-#[derive(Default, Debug, Eq)]
-pub(crate) struct GalnetDate {
-    pub(crate) day: String,
-    pub(crate) month: String,
-    pub(crate) year: String,
-}
-
-impl ToString for GalnetDate {
-    fn to_string(&self) -> String {
-        format!("{} {} {}", self.day, self.month, self.year)
-    }
-}
-
-impl PartialEq for GalnetDate {
-    fn eq(&self, other: &Self) -> bool {
-        self.to_string() == other.to_string()
-    }
-}
-
 #[derive(Debug)]
 pub(crate) enum GalnetError {
     FileError {
