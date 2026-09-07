@@ -8,12 +8,8 @@ edition = "2024"
 
 [dependencies]
 chrono = "0.4"
-futures = "0.3"
-glob = "0.3"
-lazy_static = "1.4"
 regex = "1.7"
 reqwest = { version = "0.11", features = ["json"] }
-scraper = "0.14.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.25", features = ["full"] }

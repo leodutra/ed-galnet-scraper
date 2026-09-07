@@ -1,15 +1,11 @@
-#[macro_use]
-extern crate lazy_static;
+mod common;
+mod zaonce_api;
 
 use std::error::Error;
 
-mod common;
-// mod cms_scraper;
-mod cmtypage_scraper;
-
-use cmtypage_scraper::extract_all_pages;
+use zaonce_api::extract_all_articles;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    extract_all_pages(true).await
+    extract_all_articles().await
 }

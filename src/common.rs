@@ -1,20 +1,13 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{
-    collections::HashSet,
     error::Error,
     fmt::{self, Debug, Display, Formatter},
     fs::OpenOptions,
     hash::{Hash, Hasher},
 };
 
-pub(crate) const EXTRACT_LOCATION: &str = "./galnet";
-
-lazy_static! {
-    // FILES
-    pub(crate) static ref DOWNLOADED_PAGES_FILE: String = String::from(EXTRACT_LOCATION) + "/successful-pages.json";
-    pub(crate) static ref FAILED_PAGES_FILE: String = String::from(EXTRACT_LOCATION) + "/failed-pages.json";
-    pub(crate) static ref EXTRACTED_FILES_LOCATION: String = String::from(EXTRACT_LOCATION) + "/files";
-}
+pub(crate) const EXTRACTED_FILES_LOCATION: &str = "./galnet/files";
+pub(crate) const SYNC_STATE_FILE: &str = "./galnet/zaonce-sync.json";
 
 #[derive(Debug, Default, Serialize, Deserialize, Eq)]
 pub(crate) struct Article {
@@ -46,6 +39,20 @@ impl PartialEq for Article {
             && self.url == other.url
             && self.page_index == other.page_index
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub(crate) struct SyncState {
+    #[serde(rename = "extractionDate")]
+    pub(crate) extraction_date: String,
+    #[serde(rename = "articleCount")]
+    pub(crate) article_count: usize,
+    #[serde(rename = "newestPublishedAt")]
+    pub(crate) newest_published_at: String,
+    #[serde(rename = "newestUuid")]
+    pub(crate) newest_uuid: String,
+    #[serde(rename = "oldestPublishedAt")]
+    pub(crate) oldest_published_at: String,
 }
 
 #[derive(Debug)]
@@ -105,8 +112,4 @@ where
         Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(Box::new(e)),
     }
-}
-
-pub(crate) fn list_downloaded_pages() -> Result<HashSet<String>, Box<dyn Error>> {
-    Ok(deserialize_from_file(&DOWNLOADED_PAGES_FILE)?.unwrap_or_default())
 }
