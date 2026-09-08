@@ -4,16 +4,15 @@
 //! the site (the only source for older articles) and `merge` for how the two
 //! sources are unified into one archive.
 
-use crate::common::GalnetError;
+use crate::common::{get_with_retry, strip_paragraph_wrapper};
 
 use serde::Deserialize;
-use std::{collections::HashSet, error::Error, time::Duration};
+use std::{collections::HashSet, error::Error};
 
 pub(crate) const ZAONCE_COLLECTION_URL: &str =
     "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article";
 const ACCEPT_JSONAPI: &str = "application/vnd.api+json";
 const PAGE_LIMIT: &str = "50";
-const MAX_ATTEMPTS: u32 = 3;
 
 // JSON:API response shapes. Only the fields we persist are modelled;
 // unknown fields are ignored by serde.
@@ -78,25 +77,19 @@ impl ZaonceArticle {
     /// (`field_galnet_guid` or `field_galnet_date`).
     fn from_node(node: JsonApiNode) -> Option<Self> {
         let attrs = node.attributes;
+        let raw_content = attrs
+            .body
+            .and_then(|body| body.value)
+            .unwrap_or_default()
+            .replace("\r\n", "\n");
         Some(ZaonceArticle {
             uuid: node.id,
             guid: attrs.field_galnet_guid?,
             title: attrs.title.unwrap_or_default(),
             published_at: attrs.published_at.unwrap_or_default(),
             galnet_date: attrs.field_galnet_date?,
-            content: attrs
-                .body
-                .and_then(|body| body.value)
-                .unwrap_or_default()
-                .replace("\r\n", "\n"),
+            content: strip_paragraph_wrapper(&raw_content),
         })
-    }
-
-    /// Canonical (date, title, content) key: textual identity across sources.
-    /// Kept next to the struct so the key definition lives with the data.
-    #[allow(dead_code)]
-    pub(crate) fn text_key(&self) -> String {
-        crate::merge::text_key(&self.galnet_date, &self.title, &self.content)
     }
 }
 
@@ -104,35 +97,47 @@ async fn fetch_page(
     client: &reqwest::Client,
     href: Option<&str>,
 ) -> Result<JsonApiResponse, Box<dyn Error>> {
-    let url = href.unwrap_or(ZAONCE_COLLECTION_URL).to_owned();
-    let first_url = format!(
-        "{ZAONCE_COLLECTION_URL}?sort=-published_at&page%5Boffset%5D=0&page%5Blimit%5D={PAGE_LIMIT}"
-    );
-    let mut last_error: Option<Box<dyn Error>> = None;
-    for attempt in 1..=MAX_ATTEMPTS {
-        let request = match href {
-            Some(h) => client.get(h),
-            None => client.get(&first_url),
-        }
-        .header(reqwest::header::ACCEPT, ACCEPT_JSONAPI);
-        match request.send().await {
-            Ok(response) => match response.error_for_status() {
-                Ok(response) => match response.json::<JsonApiResponse>().await {
-                    Ok(payload) => return Ok(payload),
-                    Err(e) => last_error = Some(Box::new(e)),
+    match href {
+        // Follow the API-provided `links.next` verbatim.
+        Some(h) => {
+            let url = h.to_owned();
+            let error_url = url.clone();
+            get_with_retry(
+                move || {
+                    let url = url.clone();
+                    async move {
+                        client
+                            .get(&url)
+                            .header(reqwest::header::ACCEPT, ACCEPT_JSONAPI)
+                            .send()
+                            .await
+                    }
                 },
-                Err(e) => last_error = Some(Box::new(e)),
-            },
-            Err(e) => last_error = Some(Box::new(e)),
+                error_url,
+            )
+            .await
         }
-        if attempt < MAX_ATTEMPTS {
-            tokio::time::sleep(Duration::from_secs(2 * u64::from(attempt))).await;
+        None => {
+            let url = format!(
+                "{ZAONCE_COLLECTION_URL}?sort=-published_at&page%5Boffset%5D=0&page%5Blimit%5D={PAGE_LIMIT}"
+            );
+            let error_url = url.clone();
+            get_with_retry(
+                move || {
+                    let url = url.clone();
+                    async move {
+                        client
+                            .get(&url)
+                            .header(reqwest::header::ACCEPT, ACCEPT_JSONAPI)
+                            .send()
+                            .await
+                    }
+                },
+                error_url,
+            )
+            .await
         }
     }
-    Err(Box::new(GalnetError::ScraperError {
-        url,
-        cause: last_error.expect("fetch_page must have an error after retries"),
-    }))
 }
 
 pub(crate) async fn fetch_all(

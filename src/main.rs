@@ -8,8 +8,9 @@ use std::{collections::HashMap, error::Error};
 use chrono::prelude::Utc;
 
 use common::{
-    DOWNLOADED_PAGES_FILE, EMPTY_PAGES_FILE, FAILED_PAGES_FILE, GALNET_SITE, SYNC_STATE_FILE,
-    SyncState, USER_AGENT, deserialize_from_file, read_string_set, serialize_to_file,
+    ALIASES_FILE, DOWNLOADED_PAGES_FILE, EMPTY_PAGES_FILE, FAILED_PAGES_FILE, GALNET_SITE,
+    SYNC_STATE_FILE, SyncState, USER_AGENT, deserialize_from_file, read_string_set, scan_disk,
+    serialize_to_file,
 };
 use galnet_site::{ErroredPage, GalnetSiteArticle, discover_pages, fetch_pages};
 use merge::{disk_uids, load_carried, sync_to_disk};
@@ -57,25 +58,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .filter(|page| !known_downloaded.contains(page.as_str()))
         .cloned()
         .collect();
-
-    // Repair pass: re-scrape pages whose stored articles still carry the old
-    // extraction bugs (empty titles) or the duplicated page_index copies.
-    let repair_pages = repair_pages();
-    let mut repair_new = 0usize;
-    for page in repair_pages {
-        if known_downloaded.contains(&page) && !todo.contains(&page) {
-            todo.push(page);
-            repair_new += 1;
-        }
-    }
     todo.sort();
     println!(
-        "galnet_site: {} pages todo ({} known ok, {} known empty, {} known failed, {} repair)",
+        "galnet_site: {} pages todo ({} known ok, {} known empty, {} known failed)",
         todo.len(),
         known_downloaded.len(),
         empty_known.len(),
         failed_known.len(),
-        repair_new
     );
 
     let fetch = fetch_pages(&client, &todo).await;
@@ -126,71 +115,56 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // ---- conciliate ----
     // NOTE: `fetch.articles` only covers *todo* pages this run. The merge
     // needs the full galnet_site picture (all downloaded pages), so reload
-    // previously fetched articles from the stored files as the site side too.
-    let disk = disk_uids();
+    // previously fetched articles from the stored files as the site side too
+    // — excluding CMS-canonical uids, whose files also live on disk.
+    let scan = scan_disk();
+    let disk = disk_uids(&scan);
     let extraction_date = Utc::now()
         .naive_utc()
         .format("%Y-%m-%dT%H:%M:%SZ")
         .to_string();
-    let mut site_all = load_site_from_disk();
+    let cms_guids: std::collections::HashSet<&str> =
+        zaonce_cms.iter().map(|a| a.guid.as_str()).collect();
+    let mut site_all = load_site_from_disk(&scan, &cms_guids);
     {
         let mut seen: std::collections::HashSet<String> = site_all
             .iter()
             .map(|a: &GalnetSiteArticle| a.uid.clone())
             .collect();
         for article in fetch.articles {
+            // Freshly scraped CMS-era articles arrive via the CMS fetch with
+            // cleaner text; never let a site copy shadow them.
+            if cms_guids.contains(article.uid.as_str()) {
+                continue;
+            }
             if seen.insert(article.uid.clone()) {
                 site_all.push(article);
             }
         }
     }
-    let (unified, mut stats, carried_uids) =
+    let (unified, mut stats, carried_uids, aliases) =
         merge::merge(&zaonce_cms, &site_all, &disk, &extraction_date);
-    let carried = load_carried(&carried_uids);
+    let carried = load_carried(&scan, &carried_uids);
     println!(
-        "merge: {} unified ({} uid-match, {} text-match, {} site-only, {} carried from disk)",
+        "merge: {} unified ({} uid-match, {} text-match, {} site-only, {} site-dupes collapsed, {} carried from disk)",
         unified.len(),
         stats.matched_by_uid,
         stats.matched_by_text,
         stats.site_only,
+        stats.site_dupes_collapsed,
         carried.len()
     );
 
-    let (written, unchanged) = sync_to_disk(&unified, &carried, &mut stats)?;
+    let (written, unchanged) = sync_to_disk(&unified, &carried, &mut stats, &scan)?;
     let total = unified.len() + carried.len();
     println!(
         "{total} articles synced: {written} written, {unchanged} already up to date, {} files removed",
         stats.files_removed
     );
 
-    // uid aliases (galnet_site uid -> canonical zaonce_cms guid). Only pairs
-    // where the canonical side is a zaonce_cms article count; purely
-    // site-side same-text reposts (e.g. weekly placeholders repeated under
-    // different uids on different runs) are data, not aliases.
-    let cms_guids: std::collections::HashSet<&str> =
-        zaonce_cms.iter().map(|a| a.guid.as_str()).collect();
-    let mut aliases: HashMap<String, String> = HashMap::new();
-    let canonical: HashMap<String, String> = unified
-        .iter()
-        .filter(|u| cms_guids.contains(u.article.uid.as_str()))
-        .map(|u| {
-            (
-                crate::merge::text_key(&u.article.date, &u.article.title, &u.article.content),
-                u.article.uid.clone(),
-            )
-        })
-        .collect();
-    for article in &site_all {
-        let key = crate::merge::text_key(&article.date, &article.title, &article.content);
-        if let Some(canonical_uid) = canonical.get(&key)
-            && &article.uid != canonical_uid
-        {
-            aliases.insert(article.uid.clone(), canonical_uid.clone());
-        }
-    }
-    let mut aliases: Vec<(String, String)> = aliases.into_iter().collect();
-    aliases.sort();
-    serialize_to_file("./galnet/aliases.json", &aliases)?;
+    // Aliases come straight from the merge — the single source of truth.
+    // (CMS text-matches + collapsed site-site duplicates.)
+    serialize_to_file(ALIASES_FILE, &aliases)?;
     println!("aliases: {}", aliases.len());
 
     // ---- sync state ----
@@ -212,6 +186,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             matched_by_uid: stats.matched_by_uid,
             matched_by_text: stats.matched_by_text,
             site_only: stats.site_only,
+            site_dupes_collapsed: stats.site_dupes_collapsed,
             carried_from_disk: carried.len(),
             files_removed: stats.files_removed,
         },
@@ -224,80 +199,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// Reconstruct galnet_site-side articles from the stored files so the merge
-/// sees every downloaded page, not just the pages fetched this run.
-fn load_site_from_disk() -> Vec<GalnetSiteArticle> {
-    use common::{EXTRACTED_FILES_LOCATION, deserialize_from_file};
-    use std::fs;
-
-    let mut articles = Vec::new();
-    let Ok(entries) = fs::read_dir(EXTRACTED_FILES_LOCATION) else {
-        return articles;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("json") {
+/// Reconstruct galnet_site-side articles from one [`DiskScan`] (every
+/// downloaded page, not just this run's fetches). CMS-canonical uids are
+/// excluded: their files also live on disk but belong to the CMS side.
+///
+/// Disk rows carry no page_url, so they sort as a group before live rows —
+/// the stored page_index + uid tiebreaks keep the collapse winner identical
+/// every run. `index_in_page` is restored from the stored `page_index`.
+fn load_site_from_disk(
+    scan: &common::DiskScan,
+    cms_guids: &std::collections::HashSet<&str>,
+) -> Vec<GalnetSiteArticle> {
+    let mut articles = Vec::with_capacity(scan.by_uid.len());
+    for (uid, (_, stored)) in &scan.by_uid {
+        if cms_guids.contains(uid.as_str()) {
             continue;
         }
-        let Some(path_str) = path.to_str() else {
-            continue;
-        };
-        if let Ok(Some(stored)) = deserialize_from_file::<common::Article>(path_str) {
-            articles.push(GalnetSiteArticle {
-                uid: stored.uid,
-                title: stored.title,
-                date: stored.date,
-                content: stored.content,
-                page_url: String::new(),
-                index_in_page: stored.page_index,
-            });
-        }
+        articles.push(GalnetSiteArticle {
+            uid: stored.uid.clone(),
+            title: stored.title.clone(),
+            date: stored.date.clone(),
+            content: stored.content.clone(),
+            page_url: String::new(),
+            index_in_page: stored.page_index,
+        });
     }
     articles.sort_by(|a: &GalnetSiteArticle, b: &GalnetSiteArticle| {
         a.date.cmp(&b.date).then(a.uid.cmp(&b.uid))
     });
     articles
-}
-
-/// Pages to re-scrape once: stored files with empty titles (old extraction
-/// bug) or duplicated `page_index` copies of the same uid.
-fn repair_pages() -> Vec<String> {
-    use common::{EXTRACTED_FILES_LOCATION, deserialize_from_file};
-    use std::{collections::HashMap, fs};
-
-    let mut by_uid: HashMap<String, Vec<(String, common::Article)>> = HashMap::new();
-    let Ok(entries) = fs::read_dir(EXTRACTED_FILES_LOCATION) else {
-        return Vec::new();
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("json") {
-            continue;
-        }
-        let Some(path_str) = path.to_str() else {
-            continue;
-        };
-        if let Ok(Some(article)) = deserialize_from_file::<common::Article>(path_str) {
-            by_uid
-                .entry(article.uid.clone())
-                .or_default()
-                .push((path_str.to_owned(), article));
-        }
-    }
-
-    let mut pages = std::collections::HashSet::new();
-    for files in by_uid.values() {
-        let needs_repair = files.iter().any(|(_, a)| a.title.trim().is_empty()) || files.len() > 1;
-        if !needs_repair {
-            continue;
-        }
-        for (_, article) in files {
-            // date "17 DEC 3301" -> page slug "17-DEC-3301"
-            let slug = article.date.replace(' ', "-");
-            pages.insert(format!("{GALNET_SITE}/galnet/{slug}"));
-        }
-    }
-    let mut pages: Vec<String> = pages.into_iter().collect();
-    pages.sort();
-    pages
 }

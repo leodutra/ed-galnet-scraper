@@ -15,15 +15,13 @@
 //!   not as failures, so they don't pollute the failed list.
 //! - The date is read from `div.i_right > p`, not the ambiguous `div > p`.
 
-use crate::common::{GALNET_SITE, title_fallback};
+use crate::common::{GALNET_SITE, get_text_with_retry, title_fallback};
 
 use regex::Regex;
 use reqwest::Client;
 use scraper::{ElementRef, Html, Selector};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, error::Error, sync::OnceLock, time::Duration};
-
-const MAX_ATTEMPTS: u32 = 3;
+use std::{collections::HashSet, error::Error, sync::OnceLock};
 
 #[derive(Debug)]
 pub(crate) struct GalnetSiteArticle {
@@ -81,7 +79,10 @@ fn sels() -> &'static Sels {
         title: Selector::parse("h3").expect("Article title selector"),
         date: Selector::parse("div.i_right > p").expect("Article date selector"),
         date_fallback: Selector::parse("div > p").expect("Article date fallback selector"),
-        // `:scope` is honoured by `ElementRef::select` in scraper 0.14.
+        // Live markup puts the body in a bare `> p` child of the article div.
+        // (`ElementRef::select` on a descendant selector matches within the
+        // subtree; on the verified 17-DEC-3301 page there is exactly one such
+        // `p` per block besides the dated `div.i_right > p`.)
         body: Selector::parse(":scope > p").expect("Article content selector"),
         uid_matcher: Regex::new(r"/uid/([^/#?]+)").expect("URL UID matcher"),
     })
@@ -144,7 +145,7 @@ pub(crate) fn parse_date_page(html: &str, page_url: &str) -> PageParse {
     let mut dupes_collapsed = 0usize;
     let mut skipped = 0usize;
 
-    for (index_in_page, block) in document.select(&s.article).enumerate() {
+    for block in document.select(&s.article) {
         // `h3` holds the title link; `div.i_right > p` the date; the bare
         // `> p` child the body. Queried directly (not via fuzzy `div > p`),
         // so nested date divs can't leak into the body.
@@ -191,6 +192,9 @@ pub(crate) fn parse_date_page(html: &str, page_url: &str) -> PageParse {
         } else {
             raw_title
         };
+        // Deduped position on the page (dupes collapsed above), not the raw
+        // block index — so `pageIndex` has no gaps from duplicate divs.
+        let index_in_page = articles.len();
         articles.push(GalnetSiteArticle {
             uid,
             title,
@@ -209,23 +213,7 @@ pub(crate) fn parse_date_page(html: &str, page_url: &str) -> PageParse {
 }
 
 async fn fetch_text(client: &Client, url: &str) -> Result<String, Box<dyn Error>> {
-    let mut last_error: Option<Box<dyn Error>> = None;
-    for attempt in 1..=MAX_ATTEMPTS {
-        match client.get(url).send().await {
-            Ok(response) => match response.error_for_status() {
-                Ok(response) => match response.text().await {
-                    Ok(text) => return Ok(text),
-                    Err(e) => last_error = Some(Box::new(e)),
-                },
-                Err(e) => last_error = Some(Box::new(e)),
-            },
-            Err(e) => last_error = Some(Box::new(e)),
-        }
-        if attempt < MAX_ATTEMPTS {
-            tokio::time::sleep(Duration::from_secs(2 * u64::from(attempt))).await;
-        }
-    }
-    Err(last_error.expect("fetch_text must have an error after retries"))
+    get_text_with_retry(client, url).await
 }
 
 /// All date-page links from the homepage. The "MORE" button only toggles CSS

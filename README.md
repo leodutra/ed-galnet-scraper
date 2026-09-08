@@ -26,9 +26,15 @@ two sources.
 
 Matching is primarily textual — normalized `(date, title, content)`:
 
-1. **by uid** — site guid equals zaonce_cms `field_galnet_guid`;
+1. **by uid** — site guid equals zaonce_cms `field_galnet_guid` (uid wins
+   even if CMS copy-edited the text afterwards);
 2. **by text** — normalized text matches a zaonce_cms article (the date is
    part of the key, so recurring syndicated placeholders never collapse).
+
+Same-page same-text reposts under a second uid collapse to the first uid;
+other same-text pairs are kept as separate files (the live site serves e.g.
+two distinct uids with near-identical text on `25 APR 3308` and
+`29 JAN 3311`, so page proof is required before collapsing).
 
 A site article matching zaonce_cms is filed under the zaonce_cms guid and
 text; its site uid survives in `galnet/aliases.json`. Unmatched site articles
