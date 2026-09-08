@@ -4,14 +4,13 @@
 //! the site (the only source for older articles) and `merge` for how the two
 //! sources are unified into one archive.
 
-use crate::common::{get_with_retry, strip_paragraph_wrapper};
+use crate::common::{get_text_with_retry, strip_paragraph_wrapper};
 
 use serde::Deserialize;
 use std::{collections::HashSet, error::Error};
 
 pub(crate) const ZAONCE_COLLECTION_URL: &str =
     "https://cms.zaonce.net/en-GB/jsonapi/node/galnet_article";
-const ACCEPT_JSONAPI: &str = "application/vnd.api+json";
 const PAGE_LIMIT: &str = "50";
 
 // JSON:API response shapes. Only the fields we persist are modelled;
@@ -97,47 +96,19 @@ async fn fetch_page(
     client: &reqwest::Client,
     href: Option<&str>,
 ) -> Result<JsonApiResponse, Box<dyn Error>> {
-    match href {
-        // Follow the API-provided `links.next` verbatim.
-        Some(h) => {
-            let url = h.to_owned();
-            let error_url = url.clone();
-            get_with_retry(
-                move || {
-                    let url = url.clone();
-                    async move {
-                        client
-                            .get(&url)
-                            .header(reqwest::header::ACCEPT, ACCEPT_JSONAPI)
-                            .send()
-                            .await
-                    }
-                },
-                error_url,
-            )
-            .await
-        }
-        None => {
-            let url = format!(
-                "{ZAONCE_COLLECTION_URL}?sort=-published_at&page%5Boffset%5D=0&page%5Blimit%5D={PAGE_LIMIT}"
-            );
-            let error_url = url.clone();
-            get_with_retry(
-                move || {
-                    let url = url.clone();
-                    async move {
-                        client
-                            .get(&url)
-                            .header(reqwest::header::ACCEPT, ACCEPT_JSONAPI)
-                            .send()
-                            .await
-                    }
-                },
-                error_url,
-            )
-            .await
-        }
-    }
+    // First page builds the collection URL; later pages follow the
+    // API-provided `links.next` verbatim. Both use plain GET: verified
+    // live that the collection returns JSON:API without the custom
+    // `Accept: application/vnd.api+json` header.
+    let url = match href {
+        Some(h) => h.to_owned(),
+        None => format!(
+            "{ZAONCE_COLLECTION_URL}?sort=-published_at&page%5Boffset%5D=0&page%5Blimit%5D={PAGE_LIMIT}"
+        ),
+    };
+    Ok(serde_json::from_str(
+        &get_text_with_retry(client, &url).await?,
+    )?)
 }
 
 pub(crate) async fn fetch_all(

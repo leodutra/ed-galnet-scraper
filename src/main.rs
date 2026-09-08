@@ -13,19 +13,17 @@ use common::{
     serialize_to_file,
 };
 use galnet_site::{ErroredPage, GalnetSiteArticle, discover_pages, fetch_pages};
-use merge::{disk_uids, load_carried, sync_to_disk};
+use merge::{load_carried, sync_to_disk};
 use zaonce_cms::fetch_all as fetch_zaonce_cms;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
 
     // ---- zaonce_cms JSON:API (canonical from 07 DEC 3306) ----
     let zaonce_cms = fetch_zaonce_cms(&client).await?;
     if zaonce_cms.is_empty() {
-        return Err(Box::new(common::GalnetError::ParserError {
-            cause: "JSON:API collection returned no articles".to_owned(),
-        }) as Box<dyn Error>);
+        return Err("JSON:API collection returned no articles".into());
     }
     println!("zaonce_cms: {} articles", zaonce_cms.len());
 
@@ -118,7 +116,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // previously fetched articles from the stored files as the site side too
     // — excluding CMS-canonical uids, whose files also live on disk.
     let scan = scan_disk();
-    let disk = disk_uids(&scan);
+    let disk: std::collections::HashSet<String> = scan.by_uid.keys().cloned().collect();
     let extraction_date = Utc::now()
         .naive_utc()
         .format("%Y-%m-%dT%H:%M:%SZ")
@@ -130,7 +128,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let stored_slots: std::collections::HashMap<String, (String, usize)> = scan
         .by_uid
         .iter()
-        .map(|(uid, (_, stored))| (uid.clone(), (stored.date.clone(), stored.page_index)))
+        .map(|(uid, stored)| (uid.clone(), (stored.date.clone(), stored.page_index)))
         .collect();
     // Freshly scraped rows win over the disk reload: a re-fetched page carries
     // the current text/title, and only live rows (non-empty `page_url`) can
@@ -160,12 +158,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     let carried = load_carried(&scan, &carried_uids);
     println!(
-        "merge: {} unified ({} uid-match, {} text-match, {} site-only, {} site-dupes collapsed, {} carried from disk)",
+        "merge: {} unified ({} uid-match, {} text-match, {} site-only, {} carried from disk)",
         unified.len(),
         stats.matched_by_uid,
         stats.matched_by_text,
         stats.site_only,
-        stats.site_dupes_collapsed,
         carried.len()
     );
 
@@ -200,7 +197,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
             matched_by_uid: stats.matched_by_uid,
             matched_by_text: stats.matched_by_text,
             site_only: stats.site_only,
-            site_dupes_collapsed: stats.site_dupes_collapsed,
             carried_from_disk: carried.len(),
             files_removed: stats.files_removed,
         },
@@ -226,7 +222,7 @@ fn load_site_from_disk(
     cms_guids: &std::collections::HashSet<&str>,
 ) -> Vec<GalnetSiteArticle> {
     let mut articles = Vec::with_capacity(scan.by_uid.len());
-    for (uid, (_, stored)) in &scan.by_uid {
+    for (uid, stored) in &scan.by_uid {
         if cms_guids.contains(uid.as_str()) {
             continue;
         }

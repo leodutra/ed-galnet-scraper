@@ -56,25 +56,11 @@ use crate::zaonce_cms::ZaonceArticle;
 
 use std::collections::{HashMap, HashSet};
 
-/// One reconciled article plus the provenance needed to file it.
-/// (`is_site_only` is data for tests/future reporting; the sync path files
-/// everything through the same writer.)
-#[derive(Debug)]
-pub(crate) struct UnifiedArticle {
-    pub(crate) article: Article,
-    #[allow(dead_code)]
-    pub(crate) is_site_only: bool,
-}
-
 #[derive(Debug, Default)]
 pub(crate) struct MergeStats {
     pub(crate) matched_by_uid: usize,
     pub(crate) matched_by_text: usize,
     pub(crate) site_only: usize,
-    /// Same-uid rows that arrived twice with different text (defense in
-    /// depth; normally impossible — see site-only branch). Different uids
-    /// never collapse.
-    pub(crate) site_dupes_collapsed: usize,
     pub(crate) carried_from_disk: usize,
     pub(crate) files_removed: usize,
     /// galnet_site uids that resolve to a different canonical zaonce_cms guid
@@ -98,12 +84,7 @@ pub(crate) fn aliases_sorted(
 }
 
 /// Merge output: unified records, stats, carry-over uids, aliases.
-pub(crate) type MergeOutput = (
-    Vec<UnifiedArticle>,
-    MergeStats,
-    Vec<String>,
-    Vec<(String, String)>,
-);
+pub(crate) type MergeOutput = (Vec<Article>, MergeStats, Vec<String>, Vec<(String, String)>);
 
 /// Canonical (date, title, content) key: textual identity across sources.
 pub(crate) fn text_key(date: &str, title: &str, content: &str) -> String {
@@ -183,13 +164,13 @@ pub(crate) fn merge(
     let mut groups: HashMap<String, Vec<(String, String, String, String)>> = HashMap::new();
     let mut date_order: Vec<String> = Vec::new();
     let mut push_record = |date: &str, record: (String, String, String, String)| {
-        groups.entry(date.to_owned()).or_insert_with(|| {
-            date_order.push(date.to_owned());
-            Vec::new()
-        });
-        if let Some(records) = groups.get_mut(date) {
-            records.push(record);
-        }
+        groups
+            .entry(date.to_owned())
+            .or_insert_with(|| {
+                date_order.push(date.to_owned());
+                Vec::new()
+            })
+            .push(record);
     };
 
     // 1. zaonce_cms first: canonical guids, titles, content. Dates keep API order
@@ -227,10 +208,10 @@ pub(crate) fn merge(
     // live rows in page order, uid as final tiebreak.
     let mut site_sorted: Vec<&GalnetSiteArticle> = galnet_site.iter().collect();
     site_sorted.sort_by(|a, b| {
-        (a.page_url.clone(), a.index_in_page, a.uid.clone()).cmp(&(
-            b.page_url.clone(),
+        (a.page_url.as_str(), a.index_in_page, a.uid.as_str()).cmp(&(
+            b.page_url.as_str(),
             b.index_in_page,
-            b.uid.clone(),
+            b.uid.as_str(),
         ))
     });
     // page URL -> uids served on that page (live rows only). A page that
@@ -248,10 +229,6 @@ pub(crate) fn merge(
                 .insert(article.uid.as_str());
         }
     }
-    // (uid, text-key) -> uid. Same-uid guard only (see site-only branch):
-    // different uids never collapse on text, so the map is keyed by uid
-    // rather than page. First row per (uid, text) wins.
-    let mut site_text_seen: HashMap<(String, String), String> = HashMap::new();
     // canonical site uid -> CMS guid for text-matches (alias source).
     let mut canonical_of: HashMap<String, String> = HashMap::new();
     // Per-run uid dedupe (pages render each article div twice).
@@ -287,23 +264,21 @@ pub(crate) fn merge(
         };
 
         match matched_cms {
-            Some((z, by_uid_match)) => {
-                if by_uid_match && article.uid == z.guid {
-                    // Same uid (text may have drifted through CMS copy-edits,
-                    // or the site side is a stale disk copy): CMS canonical
-                    // text is already recorded in pass 1.
-                    // A same-uid pair whose text no longer matches is still
-                    // the same article — count it, don't file it site-only.
-                    stats.matched_by_uid += 1;
-                } else if !by_uid_match {
-                    // Different uid, same normalized text.
-                    stats.matched_by_text += 1;
-                    stats.alias_uids.insert(article.uid.clone());
-                    canonical_of.insert(article.uid.clone(), z.guid.clone());
-                } else {
-                    // Unreachable: by_uid_match implies article.uid == z.guid.
-                    stats.matched_by_uid += 1;
-                }
+            Some((z, true)) => {
+                // Same uid (text may have drifted through CMS copy-edits,
+                // or the site side is a stale disk copy): CMS canonical
+                // text is already recorded in pass 1. `by_guid` hit proves
+                // `article.uid == z.guid`.
+                // A same-uid pair whose text no longer matches is still
+                // the same article — count it, don't file it site-only.
+                debug_assert_eq!(article.uid, z.guid);
+                stats.matched_by_uid += 1;
+            }
+            Some((z, false)) => {
+                // Different uid, same normalized text.
+                stats.matched_by_text += 1;
+                stats.alias_uids.insert(article.uid.clone());
+                canonical_of.insert(article.uid.clone(), z.guid.clone());
             }
             None => {
                 // Site-only: keep galnet_site text verbatim. Every uid files
@@ -316,17 +291,6 @@ pub(crate) fn merge(
                 // Distinct uids with identical normalized text are distinct
                 // upstream articles (22 JUL 3301 etc. serve one div per
                 // uid), differing by e.g. a double space.
-                //
-                // The collapse map below only guards the same-uid case: if
-                // one uid arrived twice with different text (stale disk row
-                // + fresh live row), the first wins. This cannot trigger via
-                // `seen_site_uids`, so it is pure defense-in-depth.
-                let key = (article.uid.clone(), site_key(article));
-                if site_text_seen.contains_key(&key) {
-                    stats.site_dupes_collapsed += 1;
-                    continue;
-                }
-                site_text_seen.insert(key, article.uid.clone());
                 push_record(
                     &article.date,
                     (
@@ -393,17 +357,14 @@ pub(crate) fn merge(
                     slot
                 }
             };
-            unified.push(UnifiedArticle {
-                article: article_shell(
-                    uid,
-                    page_index,
-                    title,
-                    record_date,
-                    content,
-                    extraction_date,
-                ),
-                is_site_only: !by_guid.contains_key(uid.as_str()),
-            });
+            unified.push(article_shell(
+                uid,
+                page_index,
+                title,
+                record_date,
+                content,
+                extraction_date,
+            ));
         }
     }
 
@@ -441,7 +402,7 @@ pub(crate) fn filename_for(article: &Article) -> String {
 /// Returns (written, unchanged). `carried` holds Articles loaded from disk
 /// for carry-over uids.
 pub(crate) fn sync_to_disk(
-    unified: &[UnifiedArticle],
+    unified: &[Article],
     carried: &[Article],
     stats: &mut MergeStats,
     scan: &DiskScan,
@@ -454,8 +415,8 @@ pub(crate) fn sync_to_disk(
     // Desired state: canonical filename -> article.
     let mut desired: HashMap<String, &Article> =
         HashMap::with_capacity(unified.len() + carried.len());
-    for item in unified {
-        desired.insert(filename_for(&item.article), &item.article);
+    for article in unified {
+        desired.insert(filename_for(article), article);
     }
     for article in carried {
         desired.insert(filename_for(article), article);
@@ -562,25 +523,11 @@ pub(crate) fn sync_to_disk(
 pub(crate) fn load_carried(scan: &DiskScan, uids: &[String]) -> Vec<Article> {
     let mut carried = Vec::with_capacity(uids.len());
     for uid in uids {
-        if let Some((_, article)) = scan.by_uid.get(uid) {
-            carried.push(Article {
-                uid: article.uid.clone(),
-                page_index: article.page_index,
-                title: article.title.clone(),
-                date: article.date.clone(),
-                url: article.url.clone(),
-                content: article.content.clone(),
-                extraction_date: article.extraction_date.clone(),
-                deprecated: article.deprecated,
-            });
+        if let Some(article) = scan.by_uid.get(uid) {
+            carried.push(article.clone());
         }
     }
     carried
-}
-
-/// Disk uids from one [`DiskScan`]: every uid currently stored.
-pub(crate) fn disk_uids(scan: &DiskScan) -> HashSet<String> {
-    scan.by_uid.keys().cloned().collect()
 }
 
 #[cfg(test)]
@@ -647,8 +594,8 @@ mod tests {
         let (unified, stats, _, _) = merge_fresh(&z, &c);
         assert_eq!(stats.matched_by_uid, 1);
         assert_eq!(unified.len(), 1);
-        assert_eq!(unified[0].article.uid, "g1");
-        assert_eq!(unified[0].article.title, "CMS Title");
+        assert_eq!(unified[0].uid, "g1");
+        assert_eq!(unified[0].title, "CMS Title");
     }
 
     #[test]
@@ -670,7 +617,7 @@ mod tests {
         let (unified, stats, _, _) = merge_fresh(&z, &c);
         assert_eq!(stats.matched_by_text, 1);
         assert_eq!(unified.len(), 1);
-        assert_eq!(unified[0].article.uid, "zg");
+        assert_eq!(unified[0].uid, "zg");
         assert!(stats.alias_uids.contains("site-guid"));
     }
 
@@ -751,7 +698,7 @@ mod tests {
         let (unified, stats, _, _) = merge_fresh(&z, &c);
         assert_eq!(stats.site_only, 1);
         assert_eq!(unified.len(), 2);
-        assert!(unified.iter().any(|u| u.is_site_only));
+        assert!(unified.iter().any(|u| u.uid == "old"));
     }
 
     #[test]
@@ -764,7 +711,7 @@ mod tests {
             "Real Headline\nBody text",
         )];
         let (unified, _, _, _) = merge_fresh(&z, &c);
-        assert_eq!(unified[0].article.title, "Real Headline");
+        assert_eq!(unified[0].title, "Real Headline");
     }
 
     #[test]
@@ -794,7 +741,6 @@ mod tests {
         let (unified, stats, _, aliases) = merge_fresh(&z, &c);
         assert_eq!(unified.len(), 2);
         assert_eq!(stats.site_only, 2);
-        assert_eq!(stats.site_dupes_collapsed, 0);
         assert!(aliases.is_empty());
     }
 
@@ -836,7 +782,6 @@ mod tests {
             merge(&z, &c, &disk, &slots, "2026-01-01T00:00:00Z");
         assert_eq!(unified.len(), 2);
         assert_eq!(stats.site_only, 2);
-        assert_eq!(stats.site_dupes_collapsed, 0);
         assert!(aliases.is_empty());
         assert!(carried.is_empty());
     }
@@ -868,7 +813,6 @@ mod tests {
         let (unified, stats, carried, aliases) =
             merge(&z, &c, &disk, &HashMap::new(), "2026-01-01T00:00:00Z");
         assert_eq!(unified.len(), 2);
-        assert_eq!(stats.site_dupes_collapsed, 0);
         assert!(aliases.is_empty());
         assert!(carried.is_empty());
     }
@@ -891,7 +835,7 @@ mod tests {
         assert_eq!(stats.matched_by_text, 0);
         assert_eq!(stats.site_only, 1);
         assert!(aliases.is_empty());
-        let uids: Vec<&str> = unified.iter().map(|u| u.article.uid.as_str()).collect();
+        let uids: Vec<&str> = unified.iter().map(|u| u.uid.as_str()).collect();
         assert_eq!(uids.len(), 2);
         assert!(uids.contains(&"cms1") && uids.contains(&"sib"));
     }
@@ -905,9 +849,8 @@ mod tests {
         ];
         let (unified, stats, _, aliases) = merge_fresh(&z, &c);
         assert_eq!(unified.len(), 1);
-        assert_eq!(unified[0].article.uid, "zg");
+        assert_eq!(unified[0].uid, "zg");
         assert_eq!(stats.matched_by_text, 2);
-        assert_eq!(stats.site_dupes_collapsed, 0);
         assert_eq!(
             aliases,
             vec![
@@ -936,7 +879,7 @@ mod tests {
         assert_eq!(stats.matched_by_uid, 1);
         assert_eq!(stats.site_only, 0);
         assert_eq!(unified.len(), 1);
-        assert_eq!(unified[0].article.title, "New CMS Title");
+        assert_eq!(unified[0].title, "New CMS Title");
     }
 
     #[test]
@@ -960,8 +903,8 @@ mod tests {
         let slot_of = |uid: &str| {
             unified
                 .iter()
-                .find(|u| u.article.uid == uid)
-                .map(|u| (u.article.date.clone(), u.article.page_index))
+                .find(|u| u.uid == uid)
+                .map(|u| (u.date.clone(), u.page_index))
         };
         assert_eq!(
             slot_of("keep"),
@@ -992,7 +935,7 @@ mod tests {
         let (unified, _, _, _) = merge_fresh(&z, &c);
         let slots: Vec<(&str, usize)> = unified
             .iter()
-            .map(|u| (u.article.uid.as_str(), u.article.page_index))
+            .map(|u| (u.uid.as_str(), u.page_index))
             .collect();
         assert_eq!(slots, vec![("z1", 0), ("z2", 1), ("s1", 2)]);
     }

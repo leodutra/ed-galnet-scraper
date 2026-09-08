@@ -19,7 +19,6 @@
 
 use crate::common::{GALNET_SITE, get_text_with_retry, title_fallback, trim_lines};
 
-use regex::Regex;
 use reqwest::Client;
 use scraper::{ElementRef, Html, Selector};
 use serde::{Deserialize, Serialize};
@@ -70,7 +69,6 @@ struct Sels {
     date: Selector,
     date_fallback: Selector,
     body: Selector,
-    uid_matcher: Regex,
 }
 
 fn sels() -> &'static Sels {
@@ -86,8 +84,15 @@ fn sels() -> &'static Sels {
         // subtree; on the verified 17-DEC-3301 page there is exactly one such
         // `p` per block besides the dated `div.i_right > p`.)
         body: Selector::parse(":scope > p").expect("Article content selector"),
-        uid_matcher: Regex::new(r"/uid/([^/#?]+)").expect("URL UID matcher"),
     })
+}
+
+/// Uid from an article href (`/galnet/uid/<uid>`), ignoring any trailing
+/// fragment, query, or sub-path — the old regex `/uid/([^/#?]+)` shape.
+fn uid_from_href(href: &str) -> Option<String> {
+    let (_, after) = href.split_once("/uid/")?;
+    let end = after.find(['/', '#', '?']).unwrap_or(after.len());
+    (!after[..end].is_empty()).then(|| after[..end].to_owned())
 }
 
 /// `<h3>` headline text. The title lives *inside* the `<a>`
@@ -154,7 +159,7 @@ pub(crate) fn parse_date_page(html: &str, page_url: &str) -> PageParse {
         let link = block.select(&s.link).next();
         let uid = link
             .and_then(|a| a.value().attr("href"))
-            .and_then(|href| s.uid_matcher.captures(href).map(|cap| cap[1].to_owned()));
+            .and_then(uid_from_href);
         let Some(uid) = uid else {
             skipped += 1;
             continue;
@@ -214,14 +219,10 @@ pub(crate) fn parse_date_page(html: &str, page_url: &str) -> PageParse {
     }
 }
 
-async fn fetch_text(client: &Client, url: &str) -> Result<String, Box<dyn Error>> {
-    get_text_with_retry(client, url).await
-}
-
 /// All date-page links from the homepage. The "MORE" button only toggles CSS
 /// visibility client-side; every link is present in the served HTML.
 pub(crate) async fn discover_pages(client: &Client) -> Result<Vec<String>, Box<dyn Error>> {
-    let html = fetch_text(client, GALNET_SITE).await?;
+    let html = get_text_with_retry(client, GALNET_SITE).await?;
     let document = Html::parse_document(&html);
     let link_selector = Selector::parse("a.galnetLinkBoxLink").expect("GalNet link selector");
     let mut links: HashSet<String> = HashSet::new();
@@ -236,7 +237,7 @@ pub(crate) async fn discover_pages(client: &Client) -> Result<Vec<String>, Box<d
 }
 
 async fn fetch_one(client: Client, url: String) -> (String, PageOutcome) {
-    let outcome = match fetch_text(&client, &url).await {
+    let outcome = match get_text_with_retry(&client, &url).await {
         Ok(html) => {
             let parsed = parse_date_page(&html, &url);
             if parsed.articles.is_empty() {
@@ -376,6 +377,29 @@ mod tests {
         let parsed = parse_date_page(&html, "http://example/x");
         assert!(parsed.articles.is_empty());
         assert_eq!(parsed.skipped, 1);
+    }
+
+    #[test]
+    fn uid_from_href_ignores_trailing_parts() {
+        // Same shape the old `/uid/([^/#?]+)` regex accepted.
+        assert_eq!(
+            uid_from_href("/galnet/uid/abc123"),
+            Some("abc123".to_owned())
+        );
+        assert_eq!(
+            uid_from_href("/galnet/uid/abc123#frag"),
+            Some("abc123".to_owned())
+        );
+        assert_eq!(
+            uid_from_href("/galnet/uid/abc123?x=1"),
+            Some("abc123".to_owned())
+        );
+        assert_eq!(
+            uid_from_href("/galnet/uid/abc123/extra"),
+            Some("abc123".to_owned())
+        );
+        assert_eq!(uid_from_href("/galnet/uid/"), None);
+        assert_eq!(uid_from_href("/galnet/other"), None);
     }
 
     #[test]
