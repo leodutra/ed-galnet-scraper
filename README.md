@@ -20,7 +20,10 @@ two sources.
   the homepage (all links are in the served HTML; the MORE button only toggles
   CSS). The only source before 07 DEC 3306, and the fallback for anything the
   API lacks. Page fetch state lives in `galnet/successful-pages.json`,
-  `galnet/empty-pages.json`, `galnet/failed-pages.json`.
+  `galnet/empty-pages.json`, `galnet/failed-pages.json`. Pages listed as
+  successful are never re-fetched, so after a parser fix force a full rebuild
+  with `echo '[]' > galnet/successful-pages.json` (the homepage alone
+  re-discovers all ~2071 date pages, so nothing is lost).
 
 ## Conciliation (`src/merge.rs`)
 
@@ -31,10 +34,16 @@ Matching is primarily textual — normalized `(date, title, content)`:
 2. **by text** — normalized text matches a zaonce_cms article (the date is
    part of the key, so recurring syndicated placeholders never collapse).
 
-Same-page same-text reposts under a second uid collapse to the first uid;
-other same-text pairs are kept as separate files (the live site serves e.g.
-two distinct uids with near-identical text on `25 APR 3308` and
-`29 JAN 3311`, so page proof is required before collapsing).
+Two site uids **never** collapse into each other on text alone. The live site
+serves distinct uids with identical normalized text as separate divs, and
+those are distinct upstream articles — `25 APR 3308` and `29 JAN 3311` serve
+such a pair and zaonce_cms holds *both* as separate nodes.
+
+The by-text pass carries the same guard: if the date page that served a site
+row also serves the matched zaonce_cms guid as its own div, the row stays
+site-only. `29 SEP 3308` and `18 DEC 3311` are exactly that shape — the CMS
+retired one guid of the pair, but the site still serves both, so both are
+kept.
 
 A site article matching zaonce_cms is filed under the zaonce_cms guid and
 text; its site uid survives in `galnet/aliases.json`. Unmatched site articles

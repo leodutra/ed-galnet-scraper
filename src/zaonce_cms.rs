@@ -88,7 +88,9 @@ impl ZaonceArticle {
             title: attrs.title.unwrap_or_default(),
             published_at: attrs.published_at.unwrap_or_default(),
             galnet_date: attrs.field_galnet_date?,
-            content: strip_paragraph_wrapper(&raw_content),
+            // Trimmed: some bodies carry trailing blank lines/spaces the
+            // galnet_site side never has, which would fail text-matching.
+            content: strip_paragraph_wrapper(&raw_content).trim().to_owned(),
         })
     }
 }

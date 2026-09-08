@@ -5,7 +5,9 @@
 //! (plus a few newer articles missing from the API) must still come from here.
 //!
 //! Fixes vs the original `cmtypage_scraper`:
-//! - Early-3301 pages have an **empty `<h3>` title element**; the real headline
+//! - The headline sits **inside the `<h3>`'s `<a>`**
+//!   (`<h3><a><i/> Headline</a></h3>`), so the whole `<h3>` subtree text is
+//!   read. Early-3301 pages serve an **empty `<a>`**; there the real headline
 //!   is the first line of the body text (see `title_fallback`). Previously
 //!   these were stored with `title: ""`.
 //! - Date pages render **each article div twice** (verified live on
@@ -88,16 +90,12 @@ fn sels() -> &'static Sels {
     })
 }
 
-/// Text of an element excluding nested elements (e.g. `<h3>` title text
-/// without the `<a>` link text — which matters when the title is empty).
+/// `<h3>` headline text. The title lives *inside* the `<a>`
+/// (`<h3><a><i class="fa fa-globe"></i> Headline</a></h3>`), so all descendant
+/// text is collected; the icon `<i>` is empty. Early-3301 articles serve an
+/// empty `<a>`, leaving this empty for `title_fallback`.
 fn element_own_text(element: &ElementRef) -> String {
-    let mut out = String::new();
-    for child in element.children() {
-        if let Some(text) = child.value().as_text() {
-            out.push_str(&text.text);
-        }
-    }
-    out.trim().to_owned()
+    element.text().collect::<String>().trim().to_owned()
 }
 
 /// Body text: `<br>` tags are line breaks, other markup is dropped.
@@ -117,22 +115,14 @@ fn paragraph_text(paragraph: &ElementRef) -> String {
             }
         }
     }
-    // Collapse blank separator lines from `<br /><br />`.
-    let mut lines: Vec<&str> = Vec::new();
-    for line in out.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            if !lines.is_empty() && !lines[lines.len() - 1].is_empty() {
-                lines.push("");
-            }
-        } else {
-            lines.push(trimmed);
-        }
-    }
-    while lines.last().is_some_and(|l| l.is_empty()) {
-        lines.pop();
-    }
-    lines.join("\n")
+    // One `\n` per break, blank lines dropped: `<br /><br />` is a paragraph
+    // break and zaonce_cms separates paragraphs with a single newline too,
+    // so both sources (and the pre-existing archive) stay byte-comparable.
+    out.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Parse one date page. Never fails: unparseable blocks are counted in
@@ -252,8 +242,13 @@ async fn fetch_one(client: Client, url: String) -> (String, PageOutcome) {
 /// Order of the returned articles is deterministic (page URL, then on-page).
 pub(crate) async fn fetch_pages(client: &Client, pages: &[String]) -> SiteFetch {
     let mut outcomes: Vec<(String, PageOutcome)> = Vec::with_capacity(pages.len());
-    for url in pages {
+    for (done, url) in pages.iter().enumerate() {
         outcomes.push(fetch_one(client.clone(), url.clone()).await);
+        // A full rebuild walks ~2000 pages sequentially; without this the
+        // run is silent for tens of minutes.
+        if (done + 1) % 100 == 0 {
+            println!("galnet_site: {}/{} pages fetched", done + 1, pages.len());
+        }
     }
     outcomes.sort_by(|a, b| a.0.cmp(&b.0));
 
@@ -303,6 +298,23 @@ mod tests {
         format!(
             r#"<div class="article"><h3 class="hiLite galnetNewsArticleTitle"><a href="/galnet/uid/{uid}"><i class="fa fa-globe"></i> {h3}</a></h3><div class="i_right" style="margin: 5px"><p class="small" style="color:#888;">{date}</p></div><p>{body}</p></div>"#
         )
+    }
+
+    #[test]
+    fn h3_title_is_read_from_inside_the_link() {
+        // Live markup: `<h3><a><i class="fa fa-globe"></i> Headline</a></h3>`.
+        // Reading only the h3's own text nodes yields "" and silently
+        // demotes every title to the body's first line.
+        let html = fixture(&block(
+            "abc123",
+            "Real Headline",
+            "18 DEC 3311",
+            "Body first line<br /><br />More body.",
+        ));
+        let parsed = parse_date_page(&html, "http://example/18-DEC-3311");
+        assert_eq!(parsed.articles[0].title, "Real Headline");
+        // `<br /><br />` collapses to a single newline (zaonce_cms convention).
+        assert_eq!(parsed.articles[0].content, "Body first line\nMore body.");
     }
 
     #[test]

@@ -11,10 +11,21 @@
 //! one side is missing. Matching passes, in order:
 //!
 //! 1. **by uid** — the galnet_site guid equals the zaonce_cms `field_galnet_guid`.
-//! 2. **by text** — normalized `(date, title, content)` matches a zaonce_cms
-//!    article. The date is part of the key so recurring syndicated placeholders
-//!    (e.g. weekly powerplay updates reposted verbatim for months) never
-//!    collapse into a single entry.
+//! 2. **by text (CMS only, live rows)** — normalized `(date, title, content)`
+//!    of a freshly scraped site row matches a zaonce_cms article. The date is
+//!    part of the key so recurring syndicated placeholders (e.g. weekly
+//!    powerplay updates reposted verbatim for months) never collapse into a
+//!    single entry. Disk-reload rows never text-match (no page proof).
+//!
+//! Site-vs-site: different uids NEVER collapse on text. The site renders
+//! some pages with each `<div class="article">` twice under the SAME uid
+//! (verified: 17 DEC 3301 = 8 divs / 4 uids; /galnet/uid/<uid> = 2 divs /
+//! 1 uid) — always same-uid, deduped by the fetcher and by per-run uid
+//! dedupe. Distinct uids with identical normalized text are distinct
+//! upstream articles (22 JUL 3301 etc. serve one div per uid).
+//!
+//! zaonce_cms has no duplicates at all: 884 nodes, 884 unique uuids and
+//! guids, every node carrying guid + date (verified live).
 //!
 //! Winners and losers:
 //!
@@ -24,14 +35,17 @@
 //! - A galnet_site article with no match is kept as-is (**site-only**), e.g.
 //!   pre-3306 articles or newer ones missing from the API.
 //! - Duplicate files (same uid stored under several `page_index`
-//!   values) collapse to the canonical winner; the extras are deleted.
+//!   values) collapse to the stored winner (first file wins); extras are deleted.
 //! - Files on disk whose uid matches nothing from either source are carried
 //!   over untouched (e.g. dates the live site no longer serves, or uids the
 //!   galnet_site has since replaced).
 //! - Anything else on disk (stale duplicates, superseded uids) is removed.
 //!
-//! `page_index` is the position within an in-game date group. zaonce_cms order
-//! (newest-first fetch) sets it; site-only groups keep galnet_site page order.
+//! `page_index` is a stable slot within an in-game date group, assigned
+//! first-seen-wins: known uids keep their stored slot forever, new uids take
+//! the smallest free slot in their date group. Gaps left by deletions are
+//! never compacted, so reruns never rename surviving files. Merge order only
+//! decides collision priority and the order new slots are handed out.
 
 use crate::common::{
     Article, DiskScan, EXTRACTED_FILES_LOCATION, GALNET_SITE_UID_URL, normalize_text,
@@ -57,7 +71,9 @@ pub(crate) struct MergeStats {
     pub(crate) matched_by_uid: usize,
     pub(crate) matched_by_text: usize,
     pub(crate) site_only: usize,
-    /// Same normalized text under a second site uid within one date.
+    /// Same-uid rows that arrived twice with different text (defense in
+    /// depth; normally impossible — see site-only branch). Different uids
+    /// never collapse.
     pub(crate) site_dupes_collapsed: usize,
     pub(crate) carried_from_disk: usize,
     pub(crate) files_removed: usize,
@@ -65,8 +81,9 @@ pub(crate) struct MergeStats {
     pub(crate) alias_uids: HashSet<String>,
 }
 
-/// The single alias list: (site uid, canonical uid), sorted. Covers both CMS
-/// text-matches and collapsed site-site duplicates.
+/// The single alias list: (site uid, canonical uid), sorted. Covers CMS
+/// text-matches only — site-vs-site never aliases (different uids are
+/// always distinct articles).
 pub(crate) fn aliases_sorted(
     stats: &MergeStats,
     canonical_of: &HashMap<String, String>,
@@ -136,13 +153,16 @@ fn article_shell(
 /// Merge zaonce_cms articles with galnet_site articles into file-ready records.
 ///
 /// `galnet_site` must hold true site-side articles; CMS-canonical uids are
-/// skipped defensively. Returns unified records, stats, carry-over uids (on
+/// skipped defensively. `stored_slots` maps uid -> stored `(date, page_index)`
+/// from the current [`DiskScan`]; it pins `page_index` for known uids so
+/// reruns never renumber. Returns unified records, stats, carry-over uids (on
 /// disk but matched by neither source), and the alias list
 /// (site uid -> canonical uid).
 pub(crate) fn merge(
     zaonce_cms: &[ZaonceArticle],
     galnet_site: &[GalnetSiteArticle],
     disk_uids: &HashSet<String>,
+    stored_slots: &HashMap<String, (String, usize)>,
     extraction_date: &str,
 ) -> MergeOutput {
     let mut stats = MergeStats::default();
@@ -156,6 +176,8 @@ pub(crate) fn merge(
     }
 
     // date -> ordered canonical records (uid, title, date, content).
+    // Order here only decides new-slot handout and collision priority;
+    // page_index itself comes from `stored_slots` (stable per uid).
     let mut groups: HashMap<String, Vec<(String, String, String, String)>> = HashMap::new();
     let mut date_order: Vec<String> = Vec::new();
     let mut push_record = |date: &str, record: (String, String, String, String)| {
@@ -188,22 +210,19 @@ pub(crate) fn merge(
     // the belt-and-braces uid check below is the last line of defense.
     //
     // Match order: (1) uid — the site guid equals the CMS guid, regardless
-    // of text drift; (2) normalized text. The uid check must come first:
-    // CMS copy-edits titles/content over time, so a same-uid pair with
-    // drifted text must still count as a uid-match, not site-only.
+    // of text drift; (2) normalized text for LIVE rows only. The uid check
+    // must come first: CMS copy-edits titles/content over time, so a
+    // same-uid pair with drifted text must still count as a uid-match, not
+    // site-only. Disk rows (empty page_url) never text-match: normalized
+    // text alone is too weak — live date pages serve distinct uids with
+    // identical normalized text as distinct divs (22 JUL 3301, 07 SEP 3301,
+    // 08 JUL 3302, 06 DEC 3304, 29 SEP 3308, 25 APR 3308, 29 JAN 3311),
+    // differing only by e.g. a double space or a trailing space.
     //
-    // Site-side collapse is order-dependent, so anchor the winner: the
-    // earliest on-page position wins; disk-reload rows (empty page_url)
-    // keep their stored page_index, so re-runs elect the same winner.
-    // Final tiebreak is the uid itself — deterministic across runs.
-    //
-    // NOTE: this collapse only fires when both dupes reach the merge in one
-    // run. A dupe whose uid already has a file on disk wins by carry-over
-    // instead: its uid is live, the loser is carried, and both files stay.
-    // Live-verified 25 APR 3308 / 29 JAN 3311 pages serve two distinct uids
-    // with near-identical text, so collapsing on normalized text alone
-    // would destroy a real upstream article. True collapse needs a page
-    // fetch proving same-page duplication (same page_url), not disk rows.
+    // Site-vs-site: NO collapse on text, ever (see site-only branch).
+    // Sort order below only decides new-slot handout priority: disk rows
+    // (empty page_url) first so stored slots win deterministically, then
+    // live rows in page order, uid as final tiebreak.
     let mut site_sorted: Vec<&GalnetSiteArticle> = galnet_site.iter().collect();
     site_sorted.sort_by(|a, b| {
         (a.page_url.clone(), a.index_in_page, a.uid.clone()).cmp(&(
@@ -212,9 +231,24 @@ pub(crate) fn merge(
             b.uid.clone(),
         ))
     });
-    // (page_url, text-key) -> canonical site uid (first in page order wins).
-    // Keyed by page so only same-page reposts collapse — never two disk rows
-    // from unknown pages, never two live rows from different date pages.
+    // page URL -> uids served on that page (live rows only). A page that
+    // renders the CMS guid AND a same-text sibling uid as separate divs is
+    // proof the sibling is a distinct upstream article, not the same one
+    // under a different guid — live-verified on 29 SEP 3308 (632c2adf +
+    // CMS 63357af6) and 18 DEC 3311 (6944182b + CMS 69442c6c), matching the
+    // 25 APR 3308 / 29 JAN 3311 pattern where both siblings ARE in the CMS.
+    let mut page_uids: HashMap<&str, HashSet<&str>> = HashMap::new();
+    for article in galnet_site {
+        if !article.page_url.is_empty() {
+            page_uids
+                .entry(article.page_url.as_str())
+                .or_default()
+                .insert(article.uid.as_str());
+        }
+    }
+    // (uid, text-key) -> uid. Same-uid guard only (see site-only branch):
+    // different uids never collapse on text, so the map is keyed by uid
+    // rather than page. First row per (uid, text) wins.
     let mut site_text_seen: HashMap<(String, String), String> = HashMap::new();
     // canonical site uid -> CMS guid for text-matches (alias source).
     let mut canonical_of: HashMap<String, String> = HashMap::new();
@@ -224,9 +258,30 @@ pub(crate) fn merge(
         if !seen_site_uids.insert(article.uid.as_str()) {
             continue;
         }
+        // Uid-match is defensive (callers exclude CMS guids from the site
+        // side): same uid counts even for disk rows — CMS text is already
+        // filed in pass 1, so no duplicate record is created either way.
+        // Text-match needs a live row (non-empty page_url from this run's
+        // fetch). Disk rows (empty page_url) always file as site-only:
+        // normalized text alone is too weak — live date pages serve
+        // distinct uids with identical normalized text as distinct divs,
+        // so text-matching disk rows deletes real upstream articles.
         let matched_cms: Option<(&ZaonceArticle, bool)> = match by_guid.get(article.uid.as_str()) {
             Some(z) => Some((z, true)),
-            None => by_text.get(&site_key(article)).copied().map(|z| (z, false)),
+            None if !article.page_url.is_empty() => by_text
+                .get(&site_key(article))
+                .copied()
+                // Same-page proof: if this page also serves the CMS guid as
+                // its own div, the two uids are distinct upstream articles.
+                // Collapsing here deletes a real record the site still
+                // serves, so keep this row site-only.
+                .filter(|z| {
+                    !page_uids
+                        .get(article.page_url.as_str())
+                        .is_some_and(|uids| uids.contains(z.guid.as_str()))
+                })
+                .map(|z| (z, false)),
+            None => None,
         };
 
         match matched_cms {
@@ -249,13 +304,24 @@ pub(crate) fn merge(
                 }
             }
             None => {
-                // Site-only: keep galnet_site text verbatim, collapsing
-                // same-page same-text reposts to the first uid.
-                let key = (article.page_url.clone(), site_key(article));
-                if let Some(winner) = site_text_seen.get(&key) {
+                // Site-only: keep galnet_site text verbatim. Every uid files
+                // as its own article — different uids NEVER collapse on
+                // text. Live-verified: 17 DEC 3301 renders each div twice
+                // under the SAME uid (8 divs, 4 uids), and /galnet/uid/<uid>
+                // pages do the same (2 divs, 1 uid) — the double-render is
+                // always same-uid, already deduped by the fetcher
+                // (`parse_date_page`) and by `seen_site_uids` above.
+                // Distinct uids with identical normalized text are distinct
+                // upstream articles (22 JUL 3301 etc. serve one div per
+                // uid), differing by e.g. a double space.
+                //
+                // The collapse map below only guards the same-uid case: if
+                // one uid arrived twice with different text (stale disk row
+                // + fresh live row), the first wins. This cannot trigger via
+                // `seen_site_uids`, so it is pure defense-in-depth.
+                let key = (article.uid.clone(), site_key(article));
+                if site_text_seen.contains_key(&key) {
                     stats.site_dupes_collapsed += 1;
-                    stats.alias_uids.insert(article.uid.clone());
-                    canonical_of.insert(article.uid.clone(), winner.clone());
                     continue;
                 }
                 site_text_seen.insert(key, article.uid.clone());
@@ -288,11 +354,43 @@ pub(crate) fn merge(
     carried.sort();
     stats.carried_from_disk = carried.len();
 
-    // 4. assign page_index per date group and build Articles.
+    // 4. assign page_index per date group (stable slots) and build Articles.
+    // Known uids keep their stored slot when the stored date still matches
+    // the merged date; anything else (new uids, date changes) takes the
+    // smallest free slot in its date group. Free slots include gaps left by
+    // deletions AND slots vacated by uids that moved dates (their old slot
+    // frees up). Within one date, contended slots resolve in merge order:
+    // CMS records first (API order), then site-only records (page order).
     let mut unified = Vec::new();
+    // date -> slots already claimed this run (stored keepers + new handouts).
+    let mut claimed: HashMap<String, HashSet<usize>> = HashMap::new();
+    for records in groups.values() {
+        for (uid, _, record_date, _) in records {
+            if let Some((stored_date, stored_index)) = stored_slots.get(uid)
+                && stored_date == record_date
+            {
+                claimed
+                    .entry(record_date.clone())
+                    .or_default()
+                    .insert(*stored_index);
+            }
+        }
+    }
     for date in &date_order {
         let records = &groups[date.as_str()];
-        for (page_index, (uid, title, record_date, content)) in records.iter().enumerate() {
+        for (uid, title, record_date, content) in records {
+            let page_index = match stored_slots.get(uid) {
+                Some((stored_date, stored_index)) if stored_date == record_date => *stored_index,
+                _ => {
+                    let taken = claimed.entry(record_date.clone()).or_default();
+                    let mut slot = 0usize;
+                    while taken.contains(&slot) {
+                        slot += 1;
+                    }
+                    taken.insert(slot);
+                    slot
+                }
+            };
             unified.push(UnifiedArticle {
                 article: article_shell(
                     uid,
@@ -322,6 +420,11 @@ pub(crate) fn merge(
 }
 
 /// Canonical filename for an article.
+///
+/// The uid is part of the filename, so identity never depends on the slot:
+/// two articles sharing a date and page_index still land on distinct paths.
+/// With stable slots this only happens transiently (hand-restored files),
+/// and the next run resolves it by keeping stored slots per uid.
 pub(crate) fn filename_for(article: &Article) -> String {
     format!(
         "{}/{} - {} - {}.json",
@@ -417,6 +520,13 @@ pub(crate) fn sync_to_disk(
 
     // Remove anything left on disk that is not desired: stale duplicates,
     // superseded alias-uid files, orphans. Unparseable files are left alone.
+    // Same-slot caution: desired paths embed the uid, so a file whose uid
+    // is still live (canonical) is never stale even when its
+    // `<date> - <page_index>` slot is also claimed by another uid's file.
+    // Identity is the uid, not the slot: with stable slots, a stored file
+    // for a live uid always matches its desired path (same slot) unless
+    // the uid changed dates, in which case the old-date file is cleaned up
+    // by the per-uid pass above (same uid, different path).
     let canonical_uids: HashSet<&str> = desired.values().map(|a| a.uid.as_str()).collect();
     for path in &scan.paths {
         if live_paths.contains(path) {
@@ -516,11 +626,23 @@ mod tests {
         }
     }
 
+    /// Test helper: empty disk (no uids, no stored slots) — every record is
+    /// new and takes slots 0..n in merge order.
+    fn merge_fresh(zaonce_cms: &[ZaonceArticle], galnet_site: &[GalnetSiteArticle]) -> MergeOutput {
+        merge(
+            zaonce_cms,
+            galnet_site,
+            &HashSet::new(),
+            &HashMap::new(),
+            "2026-01-01T00:00:00Z",
+        )
+    }
+
     #[test]
     fn uid_match_prefers_zaonce_text_and_guid() {
         let z = vec![cms_article("g1", "01 JAN 3308", "CMS Title", "Same body")];
         let c = vec![site_article("g1", "01 JAN 3308", "Site Title", "Same body")];
-        let (unified, stats, _, _) = merge(&z, &c, &HashSet::new(), "2026-01-01T00:00:00Z");
+        let (unified, stats, _, _) = merge_fresh(&z, &c);
         assert_eq!(stats.matched_by_uid, 1);
         assert_eq!(unified.len(), 1);
         assert_eq!(unified[0].article.uid, "g1");
@@ -529,6 +651,8 @@ mod tests {
 
     #[test]
     fn text_match_merges_different_uids_under_zaonce_guid() {
+        // Live-row text-match: a freshly scraped site row whose normalized
+        // text equals a CMS article files under the CMS guid with an alias.
         let z = vec![cms_article(
             "zg",
             "01 JAN 3308",
@@ -541,7 +665,7 @@ mod tests {
             "Same Title",
             "Same body here",
         )];
-        let (unified, stats, _, _) = merge(&z, &c, &HashSet::new(), "2026-01-01T00:00:00Z");
+        let (unified, stats, _, _) = merge_fresh(&z, &c);
         assert_eq!(stats.matched_by_text, 1);
         assert_eq!(unified.len(), 1);
         assert_eq!(unified[0].article.uid, "zg");
@@ -549,7 +673,33 @@ mod tests {
     }
 
     #[test]
+    fn disk_row_matching_cms_text_stays_site_only() {
+        // No live page proof: a disk-reload row (empty page_url) whose
+        // normalized text equals a CMS article must NOT alias — it files
+        // as its own site-only article. Normalized text alone is too weak:
+        // live date pages serve distinct uids with identical normalized
+        // text as distinct divs (e.g. a double-space vs single-space
+        // variant), so text-matching disk rows deletes real articles.
+        let z = vec![cms_article("zg", "01 JAN 3308", "Same Title", "Same body")];
+        let c = vec![site_article_on_page(
+            "site-guid",
+            "01 JAN 3308",
+            "Same Title",
+            "Same body",
+            "",
+            0,
+        )];
+        let (unified, stats, _, aliases) = merge_fresh(&z, &c);
+        assert_eq!(stats.matched_by_text, 0);
+        assert_eq!(stats.site_only, 1);
+        assert_eq!(unified.len(), 2);
+        assert!(aliases.is_empty());
+    }
+
+    #[test]
     fn whitespace_only_differences_still_match() {
+        // Live row: CMS `\r\n` vs site `<br />` whitespace collapses under
+        // normalization, so this still text-matches.
         let z = vec![cms_article(
             "zg",
             "01 JAN 3308",
@@ -562,7 +712,7 @@ mod tests {
             "Title",
             "line one line two",
         )];
-        let (unified, stats, _, _) = merge(&z, &c, &HashSet::new(), "2026-01-01T00:00:00Z");
+        let (unified, stats, _, _) = merge_fresh(&z, &c);
         assert_eq!(stats.matched_by_text, 1);
         assert_eq!(unified.len(), 1);
     }
@@ -581,7 +731,7 @@ mod tests {
             "Weekly Update",
             "Same syndicated body",
         )];
-        let (unified, stats, _, _) = merge(&z, &c, &HashSet::new(), "2026-01-01T00:00:00Z");
+        let (unified, stats, _, _) = merge_fresh(&z, &c);
         assert_eq!(stats.matched_by_text, 0);
         assert_eq!(stats.site_only, 1);
         assert_eq!(unified.len(), 2);
@@ -596,7 +746,7 @@ mod tests {
             "Ancient News",
             "Very old body",
         )];
-        let (unified, stats, _, _) = merge(&z, &c, &HashSet::new(), "2026-01-01T00:00:00Z");
+        let (unified, stats, _, _) = merge_fresh(&z, &c);
         assert_eq!(stats.site_only, 1);
         assert_eq!(unified.len(), 2);
         assert!(unified.iter().any(|u| u.is_site_only));
@@ -611,7 +761,7 @@ mod tests {
             "",
             "Real Headline\nBody text",
         )];
-        let (unified, _, _, _) = merge(&z, &c, &HashSet::new(), "2026-01-01T00:00:00Z");
+        let (unified, _, _, _) = merge_fresh(&z, &c);
         assert_eq!(unified[0].article.title, "Real Headline");
     }
 
@@ -619,33 +769,80 @@ mod tests {
     fn disk_only_uid_is_carried() {
         let z = vec![cms_article("zg", "01 JAN 3308", "T", "B")];
         let disk: HashSet<String> = ["zg", "gone-uid"].iter().map(|s| s.to_string()).collect();
-        let (_, stats, carried, _) = merge(&z, &[], &disk, "2026-01-01T00:00:00Z");
+        let (_, stats, carried, _) = merge(&z, &[], &disk, &HashMap::new(), "2026-01-01T00:00:00Z");
         assert_eq!(stats.carried_from_disk, 1);
         assert_eq!(carried, vec!["gone-uid".to_owned()]);
     }
 
     #[test]
-    fn site_same_text_collapses_to_first_uid_with_alias() {
-        // Same page, byte-identical text under two uids: page-render dupe.
+    fn live_same_page_same_text_different_uids_stay_separate() {
+        // Different uids NEVER collapse on text — even live, even same
+        // page. Live-verified: 17 DEC 3301 renders each div twice under
+        // the SAME uid (8 divs, 4 uids), and /galnet/uid/<uid> does the
+        // same (2 divs, 1 uid). The double-render is always same-uid
+        // (already deduped by the fetcher + seen_site_uids); distinct
+        // uids with identical normalized text are distinct upstream
+        // articles (22 JUL 3301 etc. serve one div per uid).
         let z = vec![];
-        let page = "https://community.elitedangerous.com/galnet/29-JAN-3311";
+        let page = "https://community.elitedangerous.com/galnet/17-DEC-3301";
         let c = vec![
-            site_article_on_page("aaa", "29 JAN 3311", "Titan Wreckage", "Same body", page, 0),
-            site_article_on_page("bbb", "29 JAN 3311", "Titan Wreckage", "Same body", page, 1),
+            site_article_on_page("aaa", "17 DEC 3301", "Same Title", "Same body", page, 0),
+            site_article_on_page("bbb", "17 DEC 3301", "Same Title", "Same body", page, 1),
         ];
-        let (unified, stats, _, aliases) = merge(&z, &c, &HashSet::new(), "2026-01-01T00:00:00Z");
-        assert_eq!(unified.len(), 1);
-        assert_eq!(unified[0].article.uid, "aaa");
-        assert_eq!(stats.site_only, 1);
-        assert_eq!(stats.site_dupes_collapsed, 1);
-        assert_eq!(aliases, vec![("bbb".to_owned(), "aaa".to_owned())]);
+        let (unified, stats, _, aliases) = merge_fresh(&z, &c);
+        assert_eq!(unified.len(), 2);
+        assert_eq!(stats.site_only, 2);
+        assert_eq!(stats.site_dupes_collapsed, 0);
+        assert!(aliases.is_empty());
+    }
+
+    #[test]
+    fn disk_rows_with_same_text_stay_separate() {
+        // Live-verified: 22 JUL 3301, 07 SEP 3301, 08 JUL 3302, 06 DEC 3304
+        // each serve distinct uids as distinct divs (5, 4, 4, 4 divs with
+        // one div per uid), some with byte-identical normalized text
+        // (double-space or trailing-space variants). Disk-reload rows have
+        // empty page_url — no page proof — so they must never collapse:
+        // each uid is its own article and both files stay.
+        let z = vec![];
+        let c = vec![
+            site_article_on_page(
+                "aaa",
+                "22 JUL 3301",
+                "Date Set for Imperial Wedding",
+                "Same body",
+                "",
+                1,
+            ),
+            site_article_on_page(
+                "bbb",
+                "22 JUL 3301",
+                "Date Set for Imperial Wedding",
+                "Same body",
+                "",
+                2,
+            ),
+        ];
+        let disk: HashSet<String> = ["aaa", "bbb"].iter().map(|s| s.to_string()).collect();
+        let slots: HashMap<String, (String, usize)> = [
+            ("aaa".to_owned(), ("22 JUL 3301".to_owned(), 1)),
+            ("bbb".to_owned(), ("22 JUL 3301".to_owned(), 2)),
+        ]
+        .into_iter()
+        .collect();
+        let (unified, stats, carried, aliases) =
+            merge(&z, &c, &disk, &slots, "2026-01-01T00:00:00Z");
+        assert_eq!(unified.len(), 2);
+        assert_eq!(stats.site_only, 2);
+        assert_eq!(stats.site_dupes_collapsed, 0);
+        assert!(aliases.is_empty());
+        assert!(carried.is_empty());
     }
 
     #[test]
     fn same_text_different_pages_stays_separate() {
-        // Live-verified 25 APR 3308 / 29 JAN 3311: the site serves two
-        // distinct uids with near-identical text. Without page proof they
-        // are two articles, not a dupe — both files stay.
+        // Two live rows from different date-page fetches are two articles,
+        // not a dupe — both files stay, no alias.
         let z = vec![];
         let c = vec![
             site_article_on_page(
@@ -656,14 +853,45 @@ mod tests {
                 "https://community.elitedangerous.com/galnet/29-JAN-3311",
                 0,
             ),
-            site_article_on_page("bbb", "29 JAN 3311", "Titan Wreckage", "Same body", "", 1),
+            site_article_on_page(
+                "bbb",
+                "29 JAN 3311",
+                "Titan Wreckage",
+                "Same body",
+                "https://community.elitedangerous.com/galnet/30-JAN-3311",
+                0,
+            ),
         ];
         let disk: HashSet<String> = ["aaa", "bbb"].iter().map(|s| s.to_string()).collect();
-        let (unified, stats, carried, aliases) = merge(&z, &c, &disk, "2026-01-01T00:00:00Z");
+        let (unified, stats, carried, aliases) =
+            merge(&z, &c, &disk, &HashMap::new(), "2026-01-01T00:00:00Z");
         assert_eq!(unified.len(), 2);
         assert_eq!(stats.site_dupes_collapsed, 0);
         assert!(aliases.is_empty());
         assert!(carried.is_empty());
+    }
+
+    #[test]
+    fn same_page_sibling_of_a_cms_guid_never_text_collapses() {
+        // Live-verified 29 SEP 3308 / 18 DEC 3311: the date page serves the
+        // CMS guid AND a same-text sibling uid as separate divs. Same shape
+        // as 25 APR 3308 / 29 JAN 3311, where both siblings are in the CMS
+        // and are provably distinct articles — so the sibling must survive
+        // as site-only instead of collapsing into an alias.
+        let page = "https://community.elitedangerous.com/galnet/18-DEC-3311";
+        let z = vec![cms_article("cms1", "18 DEC 3311", "T", "B")];
+        let c = vec![
+            site_article_on_page("cms1", "18 DEC 3311", "T", "B", page, 0),
+            site_article_on_page("sib", "18 DEC 3311", "T", "B", page, 1),
+        ];
+        let (unified, stats, _, aliases) = merge_fresh(&z, &c);
+        assert_eq!(stats.matched_by_uid, 1);
+        assert_eq!(stats.matched_by_text, 0);
+        assert_eq!(stats.site_only, 1);
+        assert!(aliases.is_empty());
+        let uids: Vec<&str> = unified.iter().map(|u| u.article.uid.as_str()).collect();
+        assert_eq!(uids.len(), 2);
+        assert!(uids.contains(&"cms1") && uids.contains(&"sib"));
     }
 
     #[test]
@@ -673,7 +901,7 @@ mod tests {
             site_article("s1", "01 JAN 3308", "T", "B"),
             site_article("s2", "01 JAN 3308", "T", "B"),
         ];
-        let (unified, stats, _, aliases) = merge(&z, &c, &HashSet::new(), "2026-01-01T00:00:00Z");
+        let (unified, stats, _, aliases) = merge_fresh(&z, &c);
         assert_eq!(unified.len(), 1);
         assert_eq!(unified[0].article.uid, "zg");
         assert_eq!(stats.matched_by_text, 2);
@@ -702,10 +930,68 @@ mod tests {
             "Old Site Title",
             "Same body",
         )];
-        let (unified, stats, _, _) = merge(&z, &c, &HashSet::new(), "2026-01-01T00:00:00Z");
+        let (unified, stats, _, _) = merge_fresh(&z, &c);
         assert_eq!(stats.matched_by_uid, 1);
         assert_eq!(stats.site_only, 0);
         assert_eq!(unified.len(), 1);
         assert_eq!(unified[0].article.title, "New CMS Title");
+    }
+
+    #[test]
+    fn known_uids_keep_stored_slots_new_uids_fill_gaps() {
+        // Stable slots: stored (date, page_index) pins the slot; a new uid
+        // in the same date takes the smallest free slot (gap 1 from a
+        // deleted uid), and a uid whose date changed frees its old slot.
+        let z = vec![];
+        let c = vec![
+            site_article_on_page("keep", "01 JAN 3308", "T", "B", "", 5),
+            site_article_on_page("moved", "02 JAN 3308", "T", "B", "", 0),
+            site_article_on_page("new", "01 JAN 3308", "N", "B2", "", 0),
+        ];
+        let slots: HashMap<String, (String, usize)> = [
+            ("keep".to_owned(), ("01 JAN 3308".to_owned(), 5)),
+            ("moved".to_owned(), ("01 JAN 3308".to_owned(), 1)),
+        ]
+        .into_iter()
+        .collect();
+        let (unified, _, _, _) = merge(&z, &c, &HashSet::new(), &slots, "2026-01-01T00:00:00Z");
+        let slot_of = |uid: &str| {
+            unified
+                .iter()
+                .find(|u| u.article.uid == uid)
+                .map(|u| (u.article.date.clone(), u.article.page_index))
+        };
+        assert_eq!(
+            slot_of("keep"),
+            Some(("01 JAN 3308".to_owned(), 5)),
+            "stored slot sticks even though merge order is 0-based"
+        );
+        assert_eq!(
+            slot_of("moved"),
+            Some(("02 JAN 3308".to_owned(), 0)),
+            "date change takes first slot of the new date"
+        );
+        assert_eq!(
+            slot_of("new"),
+            Some(("01 JAN 3308".to_owned(), 0)),
+            "new uid takes smallest free slot (0 is free; 5 claimed by keeper)"
+        );
+    }
+
+    #[test]
+    fn fresh_disk_assigns_slots_in_merge_order() {
+        // No stored slots: CMS records first (API order), then site-only
+        // records (page order) — slots 0..n within the date.
+        let z = vec![
+            cms_article("z1", "01 JAN 3308", "T1", "B1"),
+            cms_article("z2", "01 JAN 3308", "T2", "B2"),
+        ];
+        let c = vec![site_article("s1", "01 JAN 3308", "T3", "B3")];
+        let (unified, _, _, _) = merge_fresh(&z, &c);
+        let slots: Vec<(&str, usize)> = unified
+            .iter()
+            .map(|u| (u.article.uid.as_str(), u.article.page_index))
+            .collect();
+        assert_eq!(slots, vec![("z1", 0), ("z2", 1), ("s1", 2)]);
     }
 }

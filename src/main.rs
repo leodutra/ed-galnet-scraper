@@ -125,25 +125,39 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .to_string();
     let cms_guids: std::collections::HashSet<&str> =
         zaonce_cms.iter().map(|a| a.guid.as_str()).collect();
-    let mut site_all = load_site_from_disk(&scan, &cms_guids);
+    // Stable slots: uid -> stored (date, page_index). Merge pins known uids
+    // to these so reruns never renumber; new uids take free slots.
+    let stored_slots: std::collections::HashMap<String, (String, usize)> = scan
+        .by_uid
+        .iter()
+        .map(|(uid, (_, stored))| (uid.clone(), (stored.date.clone(), stored.page_index)))
+        .collect();
+    // Freshly scraped rows win over the disk reload: a re-fetched page carries
+    // the current text/title, and only live rows (non-empty `page_url`) can
+    // text-match the CMS. Disk rows then fill in every uid not fetched this
+    // run. CMS-era uids are dropped from the *disk* reload (the CMS fetch is
+    // canonical for them and its copy is cleaner) but kept among live rows:
+    // the merge files them from the CMS side anyway, and they complete the
+    // per-page uid picture its same-page guard needs.
+    let mut site_all: Vec<GalnetSiteArticle> = fetch.articles;
     {
         let mut seen: std::collections::HashSet<String> = site_all
             .iter()
             .map(|a: &GalnetSiteArticle| a.uid.clone())
             .collect();
-        for article in fetch.articles {
-            // Freshly scraped CMS-era articles arrive via the CMS fetch with
-            // cleaner text; never let a site copy shadow them.
-            if cms_guids.contains(article.uid.as_str()) {
-                continue;
-            }
+        for article in load_site_from_disk(&scan, &cms_guids) {
             if seen.insert(article.uid.clone()) {
                 site_all.push(article);
             }
         }
     }
-    let (unified, mut stats, carried_uids, aliases) =
-        merge::merge(&zaonce_cms, &site_all, &disk, &extraction_date);
+    let (unified, mut stats, carried_uids, aliases) = merge::merge(
+        &zaonce_cms,
+        &site_all,
+        &disk,
+        &stored_slots,
+        &extraction_date,
+    );
     let carried = load_carried(&scan, &carried_uids);
     println!(
         "merge: {} unified ({} uid-match, {} text-match, {} site-only, {} site-dupes collapsed, {} carried from disk)",
@@ -162,8 +176,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         stats.files_removed
     );
 
-    // Aliases come straight from the merge — the single source of truth.
-    // (CMS text-matches + collapsed site-site duplicates.)
+    // Aliases come straight from the merge — the single source of truth
+    // (CMS text-matches of live rows only).
     serialize_to_file(ALIASES_FILE, &aliases)?;
     println!("aliases: {}", aliases.len());
 
@@ -203,9 +217,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 /// downloaded page, not just this run's fetches). CMS-canonical uids are
 /// excluded: their files also live on disk but belong to the CMS side.
 ///
-/// Disk rows carry no page_url, so they sort as a group before live rows —
-/// the stored page_index + uid tiebreaks keep the collapse winner identical
-/// every run. `index_in_page` is restored from the stored `page_index`.
+/// Disk rows carry no page_url: they never text-match CMS and never
+/// collapse — each uid always files as its own article. `index_in_page`
+/// is restored from the stored `page_index` (ordering hint only; slots
+/// themselves come from `stored_slots` in the merge).
 fn load_site_from_disk(
     scan: &common::DiskScan,
     cms_guids: &std::collections::HashSet<&str>,
