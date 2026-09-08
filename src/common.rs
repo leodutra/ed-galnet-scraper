@@ -174,6 +174,18 @@ pub(crate) fn normalize_text(text: &str) -> String {
         .to_lowercase()
 }
 
+/// Trim every line and the ends. Both sources leave trailing spaces that are
+/// invisible in the rendered text but make the same article differ byte-wise
+/// depending on which source filed it.
+pub(crate) fn trim_lines(text: &str) -> String {
+    text.lines()
+        .map(str::trim)
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim()
+        .to_owned()
+}
+
 /// Early-3301 galnet_site pages have an empty `<h3>` title element; the real
 /// headline is the first line of the body text.
 pub(crate) fn title_fallback(content: &str) -> String {
@@ -350,6 +362,11 @@ mod tests {
             normalize_text("Hello\r\n  World\nTest"),
             normalize_text("hello world test")
         );
+    }
+
+    #[test]
+    fn trim_lines_strips_line_and_string_ends() {
+        assert_eq!(trim_lines("  a \n b  \n\nc \n "), "a\nb\n\nc");
     }
 
     #[test]

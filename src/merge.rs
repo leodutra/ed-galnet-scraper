@@ -49,7 +49,7 @@
 
 use crate::common::{
     Article, DiskScan, EXTRACTED_FILES_LOCATION, GALNET_SITE_UID_URL, normalize_text,
-    revert_galnet_date, title_fallback,
+    revert_galnet_date, title_fallback, trim_lines,
 };
 use crate::galnet_site::GalnetSiteArticle;
 use crate::zaonce_cms::ZaonceArticle;
@@ -141,10 +141,12 @@ fn article_shell(
     Article {
         uid: uid.to_owned(),
         page_index,
-        title,
+        title: title.trim().to_owned(),
         date: date.to_owned(),
         url: format!("{GALNET_SITE_UID_URL}/{uid}"),
-        content: content.to_owned(),
+        // Every article — CMS, site, disk reload — is normalized here, the
+        // one path that writes a file.
+        content: trim_lines(content),
         extraction_date: extraction_date.to_owned(),
         deprecated: false,
     }

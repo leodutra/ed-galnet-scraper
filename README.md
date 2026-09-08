@@ -61,5 +61,5 @@ One JSON per article:
 | `uid` | zaonce_cms `field_galnet_guid` / site guid; article URL is `https://community.elitedangerous.com/galnet/uid/<uid>` |
 | `pageIndex` | Order within the in-game date |
 | `title` / `date` | Title and in-game date (e.g. `03 SEP 3312`) |
-| `content` | Plain text (`body.value` / site paragraph) |
+| `content` | Plain text (`body.value` / site paragraph). One `\n` per break — a site `<br /><br />` pair is one newline, matching zaonce_cms; every line is trimmed, so the same article is byte-identical whichever source filed it |
 | `extractionDate` / `deprecated` | Sync bookkeeping |

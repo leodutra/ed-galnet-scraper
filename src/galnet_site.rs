@@ -17,7 +17,7 @@
 //!   not as failures, so they don't pollute the failed list.
 //! - The date is read from `div.i_right > p`, not the ambiguous `div > p`.
 
-use crate::common::{GALNET_SITE, get_text_with_retry, title_fallback};
+use crate::common::{GALNET_SITE, get_text_with_retry, title_fallback, trim_lines};
 
 use regex::Regex;
 use reqwest::Client;
@@ -98,31 +98,43 @@ fn element_own_text(element: &ElementRef) -> String {
     element.text().collect::<String>().trim().to_owned()
 }
 
-/// Body text: `<br>` tags are line breaks, other markup is dropped.
+/// Body text. A `<br /><br />` pair is **one** newline — that is the archive's
+/// and zaonce_cms's paragraph convention. Longer runs halve the same way, so
+/// the doubled `<br /><br /><br /><br />` early-3301 bodies put after their
+/// repeated headline still yields the blank line already stored on disk.
+/// Other markup contributes its text; whitespace between `<br>`s is layout.
 fn paragraph_text(paragraph: &ElementRef) -> String {
     let mut out = String::new();
+    let mut br_run = 0usize;
     for child in paragraph.children() {
         let value = child.value();
-        if let Some(text) = value.as_text() {
-            out.push_str(&text.text);
-        } else if let Some(element) = value.as_element() {
-            if element.name() == "br" {
-                out.push('\n');
-            } else if let Some(inner) = ElementRef::wrap(child) {
-                for piece in inner.text() {
-                    out.push_str(piece);
-                }
+        if value.as_element().is_some_and(|e| e.name() == "br") {
+            br_run += 1;
+            continue;
+        }
+        let text: String = match value.as_text() {
+            Some(text) => text.text.to_string(),
+            None => ElementRef::wrap(child)
+                .map(|inner| inner.text().collect())
+                .unwrap_or_default(),
+        };
+        if text.trim().is_empty() {
+            // Source-formatting whitespace: never breaks a `<br>` run.
+            if br_run == 0 {
+                out.push_str(&text);
             }
+            continue;
+        }
+        if br_run > 0 {
+            out.push_str(&"\n".repeat((br_run / 2).max(1)));
+            br_run = 0;
+            // The newline the break already emitted; drop the source one.
+            out.push_str(text.trim_start());
+        } else {
+            out.push_str(&text);
         }
     }
-    // One `\n` per break, blank lines dropped: `<br /><br />` is a paragraph
-    // break and zaonce_cms separates paragraphs with a single newline too,
-    // so both sources (and the pre-existing archive) stay byte-comparable.
-    out.lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
-        .collect::<Vec<_>>()
-        .join("\n")
+    trim_lines(&out)
 }
 
 /// Parse one date page. Never fails: unparseable blocks are counted in
@@ -315,6 +327,24 @@ mod tests {
         assert_eq!(parsed.articles[0].title, "Real Headline");
         // `<br /><br />` collapses to a single newline (zaonce_cms convention).
         assert_eq!(parsed.articles[0].content, "Body first line\nMore body.");
+    }
+
+    #[test]
+    fn doubled_break_run_keeps_one_blank_line() {
+        // Live early-3301 shape: the headline is repeated as the body's first
+        // line, separated by TWO `<br /><br />` pairs (source newline between).
+        let html = fixture(&block(
+            "abc123",
+            "",
+            "01 AUG 3301",
+            "Meet the Powers<br /><br />\n<br /><br />\nSirius Gov CEO is the focus.<br /><br />\nIn this week\u{2019}s article.",
+        ));
+        let parsed = parse_date_page(&html, "http://example/01-AUG-3301");
+        assert_eq!(parsed.articles[0].title, "Meet the Powers");
+        assert_eq!(
+            parsed.articles[0].content,
+            "Meet the Powers\n\nSirius Gov CEO is the focus.\nIn this week\u{2019}s article."
+        );
     }
 
     #[test]
