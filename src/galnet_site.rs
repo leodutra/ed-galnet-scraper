@@ -19,6 +19,7 @@
 
 use crate::common::{GALNET_SITE, get_text_with_retry, title_fallback, trim_lines};
 
+use indicatif::ProgressBar;
 use reqwest::Client;
 use scraper::{ElementRef, Html, Selector};
 use serde::{Deserialize, Serialize};
@@ -253,16 +254,30 @@ async fn fetch_one(client: Client, url: String) -> (String, PageOutcome) {
 
 /// Fetch date pages sequentially (the site is not a CDN — stay polite).
 /// Order of the returned articles is deterministic (page URL, then on-page).
-pub(crate) async fn fetch_pages(client: &Client, pages: &[String]) -> SiteFetch {
+/// Progress reports per page via `progress` (slug + outcome as the message);
+/// callers pass [`ProgressBar::hidden`] when there is nothing to fetch.
+pub(crate) async fn fetch_pages(
+    client: &Client,
+    pages: &[String],
+    progress: &ProgressBar,
+) -> SiteFetch {
     let mut outcomes: Vec<(String, PageOutcome)> = Vec::with_capacity(pages.len());
-    for (done, url) in pages.iter().enumerate() {
-        outcomes.push(fetch_one(client.clone(), url.clone()).await);
-        // A full rebuild walks ~2000 pages sequentially; without this the
-        // run is silent for tens of minutes.
-        if (done + 1) % 100 == 0 {
-            println!("galnet_site: {}/{} pages fetched", done + 1, pages.len());
-        }
+    for url in pages {
+        // The full prefix is constant noise; the `DD-MON-YYYY` slug fits the
+        // bar width and still identifies the page.
+        let slug = url.strip_prefix(GALNET_SITE).unwrap_or(url);
+        progress.set_message(format!("fetching {slug}"));
+        let (url, outcome) = fetch_one(client.clone(), url.clone()).await;
+        let verdict = match &outcome {
+            PageOutcome::Ok(parsed) => format!("ok ({})", parsed.articles.len()),
+            PageOutcome::Empty => "empty".to_owned(),
+            PageOutcome::Failed(_) => "failed".to_owned(),
+        };
+        progress.set_message(format!("{slug} → {verdict}"));
+        progress.inc(1);
+        outcomes.push((url, outcome));
     }
+    progress.finish_and_clear();
     outcomes.sort_by(|a, b| a.0.cmp(&b.0));
 
     let mut fetch = SiteFetch {

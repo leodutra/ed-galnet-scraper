@@ -6,6 +6,7 @@
 
 use crate::common::{get_text_with_retry, strip_paragraph_wrapper};
 
+use indicatif::ProgressBar;
 use serde::Deserialize;
 use std::{collections::HashSet, error::Error};
 
@@ -113,6 +114,7 @@ async fn fetch_page(
 
 pub(crate) async fn fetch_all(
     client: &reqwest::Client,
+    progress: &ProgressBar,
 ) -> Result<Vec<ZaonceArticle>, Box<dyn Error>> {
     let mut articles = Vec::new();
     let mut seen_uuids = HashSet::new();
@@ -147,6 +149,8 @@ pub(crate) async fn fetch_all(
                 None => skipped_incomplete += 1,
             }
         }
+        progress.inc(1);
+        progress.set_message(format!("page {page_count} · {} articles", articles.len()));
         match payload.links.next {
             Some(link) if !visited_hrefs.contains(&link.href) => {
                 visited_hrefs.insert(link.href.clone());
@@ -156,6 +160,9 @@ pub(crate) async fn fetch_all(
         }
     }
 
+    // Clear the spinner before the stdout summary so the finished
+    // line doesn't linger above it on a terminal.
+    progress.finish_and_clear();
     println!(
         "Fetched {} pages: {} unique articles ({} duplicates, {} incomplete skipped)",
         page_count,

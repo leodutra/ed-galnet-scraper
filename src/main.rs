@@ -1,6 +1,7 @@
 mod common;
 mod galnet_site;
 mod merge;
+mod progress;
 mod zaonce_cms;
 
 use std::{collections::HashMap, error::Error};
@@ -13,7 +14,9 @@ use common::{
     serialize_to_file,
 };
 use galnet_site::{ErroredPage, GalnetSiteArticle, discover_pages, fetch_pages};
+use indicatif::ProgressBar;
 use merge::{load_carried, sync_to_disk};
+use progress::{cms_spinner, site_bar};
 use zaonce_cms::fetch_all as fetch_zaonce_cms;
 
 #[tokio::main(flavor = "current_thread")]
@@ -21,7 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
 
     // ---- zaonce_cms JSON:API (canonical from 07 DEC 3306) ----
-    let zaonce_cms = fetch_zaonce_cms(&client).await?;
+    let zaonce_cms = fetch_zaonce_cms(&client, &cms_spinner()?).await?;
     if zaonce_cms.is_empty() {
         return Err("JSON:API collection returned no articles".into());
     }
@@ -65,7 +68,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         failed_known.len(),
     );
 
-    let fetch = fetch_pages(&client, &todo).await;
+    let fetch = if todo.is_empty() {
+        fetch_pages(&client, &todo, &ProgressBar::hidden()).await
+    } else {
+        fetch_pages(&client, &todo, &site_bar(todo.len() as u64)?).await
+    };
     println!(
         "galnet_site: {} articles from {} ok pages ({} empty, {} failed, {} dupes collapsed, {} blocks skipped)",
         fetch.articles.len(),
