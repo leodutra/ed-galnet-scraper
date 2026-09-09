@@ -48,8 +48,8 @@
 //! decides collision priority and the order new slots are handed out.
 
 use crate::common::{
-    Article, DiskScan, EXTRACTED_FILES_LOCATION, GALNET_SITE_UID_URL, normalize_text,
-    revert_galnet_date, title_fallback, trim_lines,
+    Article, DiskScan, EXTRACTED_FILES_LOCATION, GALNET_SITE_UID_URL, galnet_date_to_iso,
+    normalize_text, title_fallback, trim_lines,
 };
 use crate::galnet_site::GalnetSiteArticle;
 use crate::zaonce_cms::ZaonceArticle;
@@ -382,7 +382,7 @@ pub(crate) fn merge(
     (unified, stats, carried, aliases)
 }
 
-/// Canonical filename for an article.
+/// Canonical filename for an article: `<YYYY-MM-DD>-<page_index>-<uid>.json`.
 ///
 /// The uid is part of the filename, so identity never depends on the slot:
 /// two articles sharing a date and page_index still land on distinct paths.
@@ -390,9 +390,9 @@ pub(crate) fn merge(
 /// and the next run resolves it by keeping stored slots per uid.
 pub(crate) fn filename_for(article: &Article) -> String {
     format!(
-        "{}/{} - {} - {}.json",
+        "{}/{}-{}-{}.json",
         EXTRACTED_FILES_LOCATION,
-        revert_galnet_date(&article.date),
+        galnet_date_to_iso(&article.date),
         article.page_index,
         article.uid
     )
@@ -485,7 +485,7 @@ pub(crate) fn sync_to_disk(
     // superseded alias-uid files, orphans. Unparseable files are left alone.
     // Same-slot caution: desired paths embed the uid, so a file whose uid
     // is still live (canonical) is never stale even when its
-    // `<date> - <page_index>` slot is also claimed by another uid's file.
+    // `<date>-<page_index>` slot is also claimed by another uid's file.
     // Identity is the uid, not the slot: with stable slots, a stored file
     // for a live uid always matches its desired path (same slot) unless
     // the uid changed dates, in which case the old-date file is cleaned up
@@ -585,6 +585,24 @@ mod tests {
             &HashMap::new(),
             "2026-01-01T00:00:00Z",
         )
+    }
+
+    #[test]
+    fn filename_is_iso_date_page_index_uid() {
+        let article = Article {
+            uid: "403539b2cb99564721883714324335c63ea798a1".to_owned(),
+            page_index: 0,
+            title: "T".to_owned(),
+            date: "01 APR 3301".to_owned(),
+            url: "u".to_owned(),
+            content: "B".to_owned(),
+            extraction_date: "2026-01-01T00:00:00Z".to_owned(),
+            deprecated: false,
+        };
+        assert_eq!(
+            filename_for(&article),
+            "./galnet/files/3301-04-01-0-403539b2cb99564721883714324335c63ea798a1.json"
+        );
     }
 
     #[test]

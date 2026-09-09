@@ -54,7 +54,7 @@ idempotent; `galnet/sync.json` records the last sync.
 ## Output
 
 One JSON per article:
-`galnet/files/<YYYY MON DD> - <pageIndex> - <guid>.json`
+`galnet/files/<YYYY-MM-DD>-<pageIndex>-<guid>.json`
 
 | Field | Meaning |
 | --- | --- |

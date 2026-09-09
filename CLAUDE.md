@@ -15,11 +15,11 @@ removes the extras. Before reporting or "fixing" a deletion, prove it:
 ```bash
 # 1. does every deleted file still have a surviving twin with the same uid?
 git status --short -- galnet/files | grep '^ D' | sed 's/^ D "\?//; s/"\?$//' |
-  while read -r f; do uid="${f##* - }"; echo "$(ls galnet/files | grep -c -- "${uid%.json}") $f"; done
+  while read -r f; do uid="$(echo "$f" | sed 's/\.json$//; s/.*[ -]//')"; echo "$(ls galnet/files | grep -c -- "$uid") $f"; done
 
 # 2. the one that actually matters: did any uid disappear?
-comm -23 <(git ls-tree --name-only HEAD galnet/files/ | sed 's/.* - \(.*\)\.json/\1/' | sort -u) \
-         <(ls galnet/files | sed 's/.* - \(.*\)\.json/\1/' | sort -u)
+comm -23 <(git ls-tree --name-only HEAD galnet/files/ | sed 's/\.json$//; s/.*[ -]//' | sort -u) \
+         <(ls galnet/files | sed 's/\.json$//; s/.*[ -]//' | sort -u)
 ```
 
 Empty output from (2) means nothing was lost. Never `git checkout --
@@ -65,7 +65,7 @@ these should produce a **zero diff**:
   site. This is expected, not a fetch failure.
 - Six 3301 dates serve zero article divs upstream (`galnet/empty-pages.json`).
   Recorded as *empty*, never as failed.
-- `3305 APR 29 - 1` has empty content because the site serves a literal
+- `3305-04-29-1` has empty content because the site serves a literal
   `<p></p>`. It survives only as a disk carry-over; a fresh parse skips it.
 - `matchedByUid` / `matchedByText` of `0` in `sync.json` is normal on an
   incremental run: with every page already downloaded, the site side is

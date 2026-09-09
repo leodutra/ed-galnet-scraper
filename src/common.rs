@@ -170,11 +170,14 @@ pub(crate) fn title_fallback(content: &str) -> String {
         .to_owned()
 }
 
-/// `"03 SEP 3312"` -> `"3312 SEP 03"` so files group by year first.
-/// NOTE: the month stays an alpha abbreviation, so within a year months sort
-/// alphabetically (APR < AUG < ...), not chronologically. Numeric months would
-/// rename every file on disk, so the scheme is frozen as-is.
-pub(crate) fn revert_galnet_date(date: &str) -> String {
+/// `"03 SEP 3312"` -> `"3312-09-03"` so files group by year first and sort
+/// chronologically within it. Anything that doesn't match the fixed shape
+/// (or names an unknown month) passes through verbatim, so a bad date never
+/// silently files under a wrong name.
+pub(crate) fn galnet_date_to_iso(date: &str) -> String {
+    const MONTHS: [&str; 12] = [
+        "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+    ];
     // Fixed shape: 2 digits, space, 3 uppercase letters, space, 4 digits.
     let mut parts = date.split(' ');
     match (parts.next(), parts.next(), parts.next(), parts.next()) {
@@ -186,7 +189,10 @@ pub(crate) fn revert_galnet_date(date: &str) -> String {
                 && year.len() == 4
                 && year.bytes().all(|b| b.is_ascii_digit()) =>
         {
-            format!("{year} {mon} {day}")
+            match MONTHS.iter().position(|m| *m == mon) {
+                Some(index) => format!("{year}-{:02}-{day}", index + 1),
+                None => date.to_owned(),
+            }
         }
         _ => date.to_owned(),
     }
@@ -318,22 +324,45 @@ mod tests {
     }
 
     #[test]
-    fn revert_orders_year_first() {
-        assert_eq!(revert_galnet_date("03 SEP 3312"), "3312 SEP 03");
+    fn iso_orders_year_first() {
+        assert_eq!(galnet_date_to_iso("03 SEP 3312"), "3312-09-03");
     }
 
     #[test]
-    fn revert_rejects_slugs_and_lowercase() {
-        // Page slugs ("03-SEP-3312") and lowercase months must pass through
-        // untouched so a bad date never silently files under a wrong name.
-        assert_eq!(revert_galnet_date("03-SEP-3312"), "03-SEP-3312");
-        assert_eq!(revert_galnet_date("03 Sep 3312"), "03 Sep 3312");
-        assert_eq!(revert_galnet_date("not a date"), "not a date");
+    fn iso_covers_all_twelve_months() {
+        let cases = [
+            ("01 JAN 3301", "3301-01-01"),
+            ("01 FEB 3301", "3301-02-01"),
+            ("01 MAR 3301", "3301-03-01"),
+            ("01 APR 3301", "3301-04-01"),
+            ("01 MAY 3301", "3301-05-01"),
+            ("01 JUN 3301", "3301-06-01"),
+            ("01 JUL 3301", "3301-07-01"),
+            ("01 AUG 3301", "3301-08-01"),
+            ("01 SEP 3301", "3301-09-01"),
+            ("01 OCT 3301", "3301-10-01"),
+            ("01 NOV 3301", "3301-11-01"),
+            ("01 DEC 3301", "3301-12-01"),
+        ];
+        for (input, expected) in cases {
+            assert_eq!(galnet_date_to_iso(input), expected, "input: {input}");
+        }
+    }
+
+    #[test]
+    fn iso_rejects_slugs_lowercase_and_unknown_months() {
+        // Page slugs ("03-SEP-3312"), lowercase months and unknown
+        // 3-uppercase-letter months must pass through untouched so a bad
+        // date never silently files under a wrong name.
+        assert_eq!(galnet_date_to_iso("03-SEP-3312"), "03-SEP-3312");
+        assert_eq!(galnet_date_to_iso("03 Sep 3312"), "03 Sep 3312");
+        assert_eq!(galnet_date_to_iso("03 XXX 3312"), "03 XXX 3312");
+        assert_eq!(galnet_date_to_iso("not a date"), "not a date");
         // Wrong shapes the old `^(\d{2}) ([A-Z]{3}) (\d{4})$` regex rejected.
-        assert_eq!(revert_galnet_date("3 SEP 3312"), "3 SEP 3312");
-        assert_eq!(revert_galnet_date("03  SEP 3312"), "03  SEP 3312");
-        assert_eq!(revert_galnet_date("03 SEP 3312 "), "03 SEP 3312 ");
-        assert_eq!(revert_galnet_date("03 SEPT 3312"), "03 SEPT 3312");
+        assert_eq!(galnet_date_to_iso("3 SEP 3312"), "3 SEP 3312");
+        assert_eq!(galnet_date_to_iso("03  SEP 3312"), "03  SEP 3312");
+        assert_eq!(galnet_date_to_iso("03 SEP 3312 "), "03 SEP 3312 ");
+        assert_eq!(galnet_date_to_iso("03 SEPT 3312"), "03 SEPT 3312");
     }
 
     #[test]
